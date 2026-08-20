@@ -1,0 +1,16 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Deps (worker/ will grow these once the multiplayer backend is built)
+node_modules/
+npm-debug.log*
+
+# Wrangler local cache/dev state
+.wrangler/

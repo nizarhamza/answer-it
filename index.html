@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer It - Trivia, Fast</title>
+<meta name="description" content="Answer It - a fast, loud trivia game. Four levels, streak multipliers, and a Double worth 2x on the last question.">
+<meta name="theme-color" content="#15151b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3efe6" media="(prefers-color-scheme: light)">
+<meta property="og:title" content="Answer It - Trivia, Fast">
+<meta property="og:description" content="Do you know it, and how fast? Four levels, streaks, and a Double worth 2x.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2315151b'/%3E%3Ctext x='32' y='45' font-size='38' font-weight='700' font-family='Arial,sans-serif' fill='%237c5cff' text-anchor='middle'%3E%3F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ANSWER IT - design tokens
+   Same theming discipline as Find It (CSS-var light/dark pairs, Fredoka display +
+   Outfit text) but louder: solid, always-vivid level/shape colours instead of quiet
+   feedback pegs - see ANSWER-IT.md §1 "Brand personality".
+   ============================================================ */
+:root, [data-theme="dark"]{
+  --bg:#15151b;
+  --panel:#1f1f27;
+  --raise:#262631;
+  --sunk:#1a1a22;
+  --line:#34343f;
+  --line-strong:#47475a;
+  --text:#f4f2ec;
+  --muted:#9c98ab;
+  --accent:#6d28d9;
+  --accent-2:#ffb020;
+  --on-accent:#ffffff;
+  --focus:rgba(109,40,217,.35);
+  --scrim:rgba(10,10,14,.75);
+  --shadow:0 30px 80px rgba(0,0,0,.55);
+  --shadow-card:0 1px 2px rgba(0,0,0,.3), 0 18px 40px -28px rgba(0,0,0,.9);
+  --radius:22px;
+  --radius-sm:14px;
+  --pill:999px;
+}
+[data-theme="light"]{
+  --bg:#f3efe6;
+  --panel:#ffffff;
+  --raise:#f7f4ed;
+  --sunk:#ffffff;
+  --line:#e4dfd2;
+  --line-strong:#cfc8b6;
+  --text:#26232e;
+  --muted:#726c80;
+  --accent:#6d28d9;
+  --accent-2:#a8690a;
+  --on-accent:#ffffff;
+  --focus:rgba(109,40,217,.22);
+  --scrim:rgba(38,35,46,.45);
+  --shadow:0 30px 70px rgba(38,35,46,.22);
+  --shadow-card:0 1px 2px rgba(38,35,46,.05), 0 18px 40px -28px rgba(38,35,46,.35);
+}
+/* Level + option-shape colours are deliberately identical in both themes - solid fills with
+   white text, same reasoning as Find It's --mark-* tokens: these are fixed identity colours,
+   not theme-adaptive text-on-background colours. Depth chosen to clear WCAG AA (4.5:1) with
+   white text (matches common "700"-depth swatches). */
+:root{
+  --lvl-easy:#15803d; --lvl-medium:#1d4ed8; --lvl-hard:#c2410c; --lvl-hell:#b91c1c;
+  --shape-a:#b91c1c; --shape-b:#1d4ed8; --shape-c:#a16207; --shape-d:#15803d;
+}
+
+*{box-sizing:border-box}
+.icon{width:1em;height:1em;display:inline-block;flex:none;vertical-align:-.125em}
+.spinner{width:48px;height:48px}
+.spinner svg{width:100%;height:100%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner svg{animation:none}}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Outfit",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  transition:background-color .3s ease,color .3s ease;
+}
+h1,h2,h3,.display{font-family:"Fredoka",system-ui,sans-serif;font-weight:600;margin:0}
+button{font-family:inherit}
+p{margin:0}
+.hide{display:none !important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+#fx{position:fixed;inset:0;pointer-events:none;z-index:80}
+
+/* ---------------- Layout shell ---------------- */
+.screen{min-height:100%;display:none;flex-direction:column}
+.screen.active{display:flex}
+#app{min-height:100vh;display:flex;flex-direction:column}
+.wrap{max-width:640px;margin:0 auto;width:100%;padding:20px;flex:1;display:flex;flex-direction:column;gap:18px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px}
+.iconbtn{width:42px;height:42px;border-radius:var(--pill);border:none;background:var(--raise);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px}
+.iconbtn:hover{background:var(--line)}
+.langsel{height:42px;border-radius:var(--pill);border:none;background:var(--raise);color:var(--text);padding:0 16px 0 12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.langsel:hover{background:var(--line)}
+
+/* ---------------- Wordmark ---------------- */
+.wordmark{
+  font-size:clamp(40px,10vw,64px);
+  font-weight:700;
+  background:linear-gradient(90deg,var(--lvl-easy),var(--lvl-medium) 38%,var(--lvl-hard) 68%,var(--lvl-hell));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  letter-spacing:-.02em;
+}
+.tagline{color:var(--muted);font-size:16px;margin-top:4px}
+
+/* ---------------- Buttons ---------------- */
+.btn{
+  font-weight:600;border:none;border-radius:var(--radius-sm);padding:14px 20px;font-size:15px;
+  cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center;
+  transition:transform .15s ease, box-shadow .15s ease, background .2s ease, opacity .2s ease;
+  color:var(--text);background:var(--raise);
+}
+.btn:active{transform:scale(.97)}
+.btn:hover{background:var(--line)}
+.btn-primary{background:var(--accent);color:var(--on-accent);box-shadow:0 10px 24px -10px rgba(109,40,217,.55)}
+.btn-primary:hover{background:#7c3aed}
+.btn-lg{padding:18px 26px;font-size:18px;border-radius:var(--radius);width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none !important}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-row .btn{flex:1}
+.link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:14px;padding:4px}
+
+/* ---------------- Cards / panels ---------------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-card)}
+.section-title{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:10px}
+
+/* ---------------- Segmented control ---------------- */
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:var(--pill);padding:4px;gap:4px}
+.seg button{flex:1;border:none;background:transparent;color:var(--muted);padding:10px 12px;border-radius:var(--pill);font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
+.seg button.on{background:var(--accent);color:var(--on-accent)}
+
+/* ---------------- Toggle switch ---------------- */
+.togglerow{display:flex;align-items:center;justify-content:space-between;padding:10px 2px;gap:12px}
+.togglerow .lbl{font-weight:500}
+.togglerow .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.switch{position:relative;width:46px;height:26px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.switch .track{position:absolute;inset:0;background:var(--sunk);border:1px solid var(--line-strong);border-radius:var(--pill);transition:background .2s}
+.switch .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:transform .2s, background .2s}
+.switch input:checked + .track{background:var(--accent)}
+.switch input:checked + .track .knob{transform:translateX(20px);background:#fff}
+.switch input:disabled + .track{opacity:.4}
+
+/* ---------------- Category grid ---------------- */
+.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.cattile{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 6px;border-radius:var(--radius-sm);background:var(--raise);border:2px solid transparent;cursor:pointer;color:var(--text);font-size:12px;font-weight:600;text-align:center}
+.cattile.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 16%, var(--raise))}
+.cattile .icon{width:22px;height:22px}
+
+/* ---------------- Mix bar ---------------- */
+.mixbar{display:flex;height:14px;border-radius:var(--pill);overflow:hidden;background:var(--sunk);border:1px solid var(--line)}
+.mixbar > div{height:100%;transition:width .3s ease}
+.mixlegend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.mixlegend span.dot{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:middle}
+
+/* ---------------- Question screen ---------------- */
+.qtop{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--pill);font-size:13px;font-weight:600;background:var(--raise);color:var(--text)}
+.chip-level{color:#fff;text-transform:uppercase}
+.progress-txt{color:var(--muted);font-size:13px;margin-left:auto}
+.timerbar{height:10px;border-radius:var(--pill);background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
+.timerbar-fill{height:100%;width:100%;transform-origin:left;transform:scaleX(1);border-radius:var(--pill)}
+.timer-label{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;color:var(--muted)}
+.streakpill{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(90deg,var(--accent),#a855f7);color:#fff;padding:6px 12px;border-radius:var(--pill);font-weight:700;font-size:13px}
+.streakpill.bump{animation:pillbump .4s ease}
+@keyframes pillbump{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+.qtext{font-family:"Fredoka";font-weight:600;font-size:clamp(20px,5vw,28px);line-height:1.25;margin:6px 0}
+
+.optgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.optgrid{grid-template-columns:1fr}}
+.opt{
+  display:flex;align-items:center;gap:10px;padding:16px 14px;border-radius:var(--radius-sm);
+  border:none;cursor:pointer;color:#fff;background:var(--opt-color);font-size:15px;font-weight:600;
+  text-align:left;transition:transform .12s ease, filter .15s ease, opacity .2s ease;min-height:64px;
+}
+.opt:hover{filter:brightness(1.08)}
+.opt:active{transform:scale(.98)}
+.opt[disabled]{cursor:default}
+.opt.dim{opacity:.35}
+.opt.correct{outline:3px solid #fff;outline-offset:2px}
+.opt.wrong{outline:3px solid rgba(255,255,255,.6);outline-offset:2px;filter:saturate(.5)}
+.opt-shape{width:20px;height:20px;background:#fff;flex:none}
+.opt-shape.tri{clip-path:polygon(50% 6%, 6% 94%, 94% 94%)}
+.opt-shape.dia{clip-path:polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%)}
+.opt-shape.cir{border-radius:50%}
+.opt-shape.sq{border-radius:4px}
+.opt-key{font-size:12px;opacity:.85;font-weight:700}
+.opt-text{flex:1}
+.opt-mark{font-size:16px}
+
+.openrow{display:flex;gap:10px}
+.openinput{flex:1;padding:16px;border-radius:var(--radius-sm);border:2px solid var(--line);background:var(--sunk);color:var(--text);font-size:17px;font-family:inherit}
+.openinput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--focus)}
+.lockednote{color:var(--muted);font-size:14px;text-align:center;padding:20px}
+
+/* ---------------- Interstitials ---------------- */
+.interstitial{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:30px;color:#fff}
+.interstitial.hell{background:radial-gradient(circle at 50% 30%, #7a1414, #2b0505 75%)}
+.interstitial.dbl{background:radial-gradient(circle at 50% 30%, #4c1d95, #150626 75%)}
+.interstitial .big{font-family:"Fredoka";font-weight:700;font-size:clamp(40px,12vw,80px);letter-spacing:.02em}
+.interstitial .sub{font-size:18px;opacity:.9;max-width:420px}
+.interstitial .flame{font-size:clamp(50px,14vw,90px);animation:flicker 1.1s ease-in-out infinite}
+@keyframes flicker{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.08) rotate(2deg)}}
+@media (prefers-reduced-motion:reduce){.interstitial .flame{animation:none}}
+
+/* ---------------- Reveal ---------------- */
+.reveal-answer{font-family:"Fredoka";font-weight:600;font-size:22px;text-align:center;padding:10px 0}
+.reveal-result{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--radius-sm);background:var(--raise)}
+.reveal-result .mark{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;color:#fff}
+.reveal-result .mark.ok{background:var(--lvl-easy)}
+.reveal-result .mark.no{background:var(--lvl-hell)}
+.reveal-stats{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.reveal-stats b{color:var(--text)}
+.notice{font-size:13px;color:var(--accent-2);background:color-mix(in srgb, var(--accent-2) 14%, var(--panel));border:1px solid color-mix(in srgb, var(--accent-2) 30%, transparent);border-radius:var(--radius-sm);padding:10px 12px}
+
+/* ---------------- Podium ---------------- */
+.finalscore{font-family:"Fredoka";font-weight:700;font-size:clamp(44px,12vw,72px);text-align:center;background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.pbbadge{text-align:center;font-weight:700;color:var(--lvl-easy)}
+.catrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.catrow:last-child{border-bottom:none}
+.catrow .name{width:130px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.catrow .bar{flex:1;height:10px;background:var(--sunk);border-radius:var(--pill);overflow:hidden}
+.catrow .bar > div{height:100%;background:var(--lvl-easy);border-radius:var(--pill)}
+.catrow .frac{font-size:12.5px;color:var(--muted);width:44px;text-align:right}
+.reviewlist{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.reviewrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--raise);font-size:13px}
+.reviewrow .rtext{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reviewrow .rmark{flex:none}
+
+/* ---------------- Modal ---------------- */
+.modal-scrim{position:fixed;inset:0;background:var(--scrim);z-index:70;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--panel);border-radius:var(--radius);max-width:480px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:var(--shadow)}
+.modal h2{margin-bottom:12px}
+
+/* ---------------- Toast ---------------- */
+#toast-wrap{position:fixed;bottom:18px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:90;pointer-events:none}
+.toast{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 18px;border-radius:var(--pill);box-shadow:var(--shadow-card);font-size:13.5px;font-weight:500;animation:toastin .25s ease}
+@keyframes toastin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------------- RTL (Arabic) ----------------
+   Flexbox rows already mirror for free under dir="rtl" (row-reversal is direction-aware by
+   spec), which covers most of this page's layout automatically, question content included -
+   it's machine-translated per translateQuestion() when the interface isn't English, so it's
+   no longer pinned LTR the way English-only content would be. What's left here is the
+   handful of physical (not logical) left/right properties below, plus the lvlDot() marker
+   whose gap sits on whichever side is now "before" the text it labels. */
+[dir="rtl"] .progress-txt{margin-left:0;margin-right:auto}
+[dir="rtl"] .streakpill{margin-left:0;margin-right:auto}
+[dir="rtl"] .mixlegend span.dot{margin-right:0;margin-left:5px}
+[dir="rtl"] .catrow .frac{text-align:left}
+
+/* ---------------- Motion / a11y ---------------- */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<canvas id="fx" class="hide"></canvas>
+<div id="toast-wrap" aria-live="polite"></div>
+
+<div id="app">
+
+  <!-- ============== MENU ============== -->
+  <section class="screen active" id="screen-menu">
+    <div class="topbar">
+      <select class="langsel" id="langSel" data-i18n-title="language" data-i18n-aria="language">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="ar">العربية</option>
+      </select>
+      <button class="iconbtn" id="themeBtn" data-i18n-title="toggleTheme" data-i18n-aria="toggleTheme"></button>
+    </div>
+    <div class="wrap" style="justify-content:center;text-align:center;gap:26px">
+      <div>
+        <h1 class="wordmark">Answer It</h1>
+        <p class="tagline" data-i18n="tagline"></p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button class="btn btn-primary btn-lg" id="menuPlaySolo"><span data-icon="play"></span> <span data-i18n="playSolo"></span></button>
+        <button class="btn btn-lg" id="menuRooms" disabled data-i18n-title="roomsTitle"><span data-icon="users"></span> <span data-i18n="roomsComingSoon"></span></button>
+      </div>
+      <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap">
+        <button class="link-btn" id="menuHowTo" data-i18n="howToPlay"></button>
+        <button class="link-btn" id="menuCredits" data-i18n="credits"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== SOLO SETUP ============== -->
+  <section class="screen" id="screen-setup">
+    <div class="topbar">
+      <button class="iconbtn" id="setupBack" data-icon="arrowLeft" data-i18n-aria="back"></button>
+      <h2 style="font-size:18px" data-i18n="soloRoundTitle"></h2>
+      <span style="width:42px"></span>
+    </div>
+    <div class="wrap">
+
+      <div class="card">
+        <div class="section-title" data-i18n="categoriesTitle"></div>
+        <div class="catgrid" id="catGrid"></div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px" data-i18n="questionsLanguageNote"></p>
+      </div>
+
+      <div class="card">
+        <div class="section-title" data-i18n="questionsTitle"></div>
+        <div class="seg" id="segN">
+          <button data-v="10">10</button>
+          <button data-v="15">15</button>
+          <button data-v="20">20</button>
+          <button data-v="30">30</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" data-i18n="answerStyleTitle"></div>
+        <div class="seg" id="segStyle">
+          <button data-v="choice" data-i18n="styleChoice"></button>
+          <button data-v="open" data-i18n="styleOpen"></button>
+          <button data-v="mixed" data-i18n="styleMixed"></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" data-i18n="intensityTitle"></div>
+        <div class="seg" id="segIntensity">
+          <button data-v="chill" data-i18n="intensityChill"></button>
+          <button data-v="standard" data-i18n="intensityStandard"></button>
+          <button data-v="brutal" data-i18n="intensityBrutal"></button>
+          <button data-v="adaptive" data-i18n="intensityAdaptive"></button>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:10px" id="intensityNote"></p>
+        <div class="mixbar" id="mixBar" style="margin-top:6px"></div>
+        <div class="mixlegend" id="mixLegend" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="togglerow">
+          <div><div class="lbl" data-i18n="streaksLabel"></div><div class="sub" data-i18n="streaksSub"></div></div>
+          <label class="switch"><input type="checkbox" id="toggleStreaks" checked><span class="track"><span class="knob"></span></span></label>
+        </div>
+        <div class="togglerow">
+          <div><div class="lbl" data-i18n="hellInsuranceLabel"></div><div class="sub" data-i18n="hellInsuranceSub"></div></div>
+          <label class="switch"><input type="checkbox" id="toggleInsurance"><span class="track"><span class="knob"></span></span></label>
+        </div>
+        <div class="togglerow">
+          <div><div class="lbl" data-i18n="extendedTimeLabel"></div><div class="sub" data-i18n="extendedTimeSub"></div></div>
+          <label class="switch"><input type="checkbox" id="toggleExtended"><span class="track"><span class="knob"></span></span></label>
+        </div>
+      </div>
+
+      <p class="notice hide" id="setupWarning"></p>
+      <button class="btn btn-primary btn-lg" id="startRoundBtn">Start - 15 + The Double</button>
+    </div>
+  </section>
+
+  <!-- ============== LOADING ============== -->
+  <section class="screen" id="screen-loading">
+    <div class="wrap" style="justify-content:center;align-items:center;text-align:center;gap:16px">
+      <div class="spinner" id="loadingSpinner" data-icon="loaderCircle" style="color:var(--accent)"></div>
+      <h2 data-i18n="buildingRound"></h2>
+      <p style="color:var(--muted)" id="loadingSub"></p>
+      <button class="link-btn hide" id="loadingCancel" data-i18n="cancel"></button>
+    </div>
+  </section>
+
+  <!-- ============== ERROR ============== -->
+  <section class="screen" id="screen-error">
+    <div class="wrap" style="justify-content:center;align-items:center;text-align:center;gap:14px">
+      <div data-icon="wifiOff" style="width:44px;height:44px;color:var(--muted)"></div>
+      <h2 data-i18n="couldntLoad"></h2>
+      <p style="color:var(--muted)" id="errorMsg"></p>
+      <button class="btn btn-primary" id="errorRetry" data-i18n="tryAgain"></button>
+      <button class="link-btn" id="errorMenu" data-i18n="backToMenu"></button>
+    </div>
+  </section>
+
+  <!-- ============== QUESTION ============== -->
+  <section class="screen" id="screen-question">
+    <div class="wrap" style="gap:14px">
+      <div class="qtop">
+        <span class="chip chip-level" id="qLevelChip">EASY</span>
+        <span class="chip" id="qCatChip">General</span>
+        <span class="progress-txt" id="qProgress">Question 1 of 15</span>
+      </div>
+      <div class="streakpill hide" id="streakPill" style="margin-left:0"><span data-icon="flame"></span> <span id="streakVal">0</span> <span id="streakWordEl" data-i18n="streakWord"></span> · <span id="streakMult">×1.0</span></div>
+      <div>
+        <div class="timerbar"><div class="timerbar-fill" id="timerFill"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span class="timer-label"><span id="timerLabel">15</span>s</span>
+          <span class="sr-only" id="timerAnnounce" aria-live="assertive"></span>
+        </div>
+      </div>
+      <h2 class="qtext" id="qText"></h2>
+
+      <div class="optgrid" id="qOptions"></div>
+
+      <div class="openrow hide" id="qOpenRow">
+        <input class="openinput" id="qOpenInput" type="text" autocomplete="off" autocorrect="off" spellcheck="false" data-i18n-placeholder="typeYourAnswer" data-i18n-aria="yourAnswerAria">
+        <button class="btn btn-primary" id="qOpenSubmit"><span data-i18n="send"></span> <span data-icon="send"></span></button>
+      </div>
+      <p class="lockednote hide" id="qLockedNote"><span data-icon="hourglass"></span> <span data-i18n="lockedWaiting"></span></p>
+    </div>
+  </section>
+
+  <!-- ============== REVEAL ============== -->
+  <section class="screen" id="screen-reveal">
+    <div class="wrap" style="gap:14px" aria-live="polite">
+      <div class="qtop">
+        <span class="chip chip-level" id="rLevelChip">EASY</span>
+        <span class="chip" id="rCatChip">General</span>
+      </div>
+      <p style="color:var(--muted);font-size:13px" data-i18n="correctAnswerLabel"></p>
+      <p class="reveal-answer" id="rAnswer">-</p>
+      <p class="notice hide" id="rDisputeNote"><span data-icon="scale"></span> <span data-i18n="disputeNote"></span></p>
+
+      <div class="reveal-result">
+        <span class="mark" id="rMark"></span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:20px" id="rPoints">+600</div>
+          <div class="reveal-stats">
+            <span><b id="rTime">1.2s</b></span>
+            <span><span id="streakWordEl2" data-i18n="streakWord"></span> <b id="rStreak">2</b></span>
+            <span id="rMultWrap">×<b id="rMult">1.1</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--muted);font-size:13px" data-i18n="scoreLabel"></span>
+        <span style="font-family:'Fredoka';font-weight:600;font-size:22px" id="rScore">0</span>
+      </div>
+
+      <button class="btn btn-primary btn-lg" id="revealNext">Next <span data-icon="arrowRight"></span></button>
+    </div>
+  </section>
+
+  <!-- ============== PODIUM ============== -->
+  <section class="screen" id="screen-podium">
+    <div class="wrap" style="gap:18px">
+      <h2 style="text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span data-i18n="roundComplete"></span> <span data-icon="flag"></span></h2>
+      <p class="finalscore" id="finalScore">0</p>
+      <p class="pbbadge hide" id="pbBadge"></p>
+
+      <div class="card">
+        <div class="section-title" data-i18n="perCategoryAccuracy"></div>
+        <div id="catBreakdown"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" data-i18n="awardsTitle"></div>
+        <div id="awardsList" style="display:flex;flex-direction:column;gap:8px;font-size:14px"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" data-i18n="reviewYourAnswers"></div>
+        <div class="reviewlist" id="reviewList"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="podiumRematch"><span data-icon="repeat"></span> <span data-i18n="playAgain"></span></button>
+        <button class="btn" id="podiumSettings"><span data-icon="settings"></span> <span data-i18n="changeSettings"></span></button>
+      </div>
+      <button class="link-btn" id="podiumMenu" data-i18n="backToMenu"></button>
+    </div>
+  </section>
+
+</div>
+
+<!-- Hell / Double interstitials float above everything -->
+<div class="interstitial hell hide" id="hellCard" role="alertdialog" data-i18n-aria="hellQuestionAria">
+  <div class="flame" data-icon="flame"></div>
+  <div class="big" data-i18n="hellBig"></div>
+  <div class="sub" id="hellSub"></div>
+</div>
+<div class="interstitial dbl hide" id="dblCard" role="alertdialog" data-i18n-aria="theDoubleAria">
+  <div class="flame" style="animation:none" data-icon="zap"></div>
+  <div class="big" data-i18n="doubleBig"></div>
+  <div class="sub" id="dblSub"></div>
+</div>
+
+<!-- How to play / Credits modal -->
+<div class="modal-scrim hide" id="modalScrim">
+  <div class="modal" id="modalBody" role="dialog" aria-modal="true"></div>
+</div>
+
+<!-- Curated core question bank (§6.5). A classic script on purpose: it sets a global rather
+     than exporting, so the same file works over file:// here and as a side-effect import in the
+     Worker. If it fails to load the game still runs, just on API questions alone. -->
+<script src="bank/curated-core.js"></script>
+
+<script>
+"use strict";
+/* ============================================================
+   Utilities
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function on(el, ev, fn){ el.addEventListener(ev, fn); }
+function fmtMs(ms){ return (ms/1000).toFixed(1) + "s"; }
+function esc(s){ const d=document.createElement("div"); d.textContent=String(s); return d.innerHTML; }
+
+/* ============================================================
+   Icons - inline Lucide (github.com/lucide-icons/lucide, ISC licence) path data, vendored
+   at build time so the page needs no external request or CDN - same reasoning as everything
+   else here staying dependency-free, and the same library find-it-site already uses for its
+   own ICONS object. `icon()` wraps the path data in the standard Lucide <svg> attributes;
+   `mountIcons()` replaces every static `data-icon="name"` placeholder in the initial markup
+   with its real SVG on boot - dynamically-rendered content calls icon() directly instead.
+   ============================================================ */
+const ICONS = {
+  sun: '<circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.93 4.93 1.41 1.41" /> <path d="m17.66 17.66 1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.34 17.66-1.41 1.41" /> <path d="m19.07 4.93-1.41 1.41" />',
+  moon: '<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />',
+  play: '<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <path d="M16 3.128a4 4 0 0 1 0 7.744" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <circle cx="9" cy="7" r="4" />',
+  flame: '<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4" />',
+  hourglass: '<path d="M5 22h14" /> <path d="M5 2h14" /> <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" /> <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />',
+  zap: '<path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" />',
+  flag: '<path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528" />',
+  partyPopper: '<path d="M5.8 11.3 2 22l10.7-3.79" /> <path d="M4 3h.01" /> <path d="M22 8h.01" /> <path d="M15 2h.01" /> <path d="M22 20h.01" /> <path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10" /> <path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17" /> <path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7" /> <path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z" />',
+  repeat: '<path d="m17 2 4 4-4 4" /> <path d="M3 11v-1a4 4 0 0 1 4-4h14" /> <path d="m7 22-4-4 4-4" /> <path d="M21 13v1a4 4 0 0 1-4 4H3" />',
+  settings: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /> <circle cx="12" cy="12" r="3" />',
+  check: '<path d="M20 6 9 17l-5-5" />',
+  x: '<path d="M18 6 6 18" /> <path d="m6 6 12 12" />',
+  scale: '<path d="M12 3v18" /> <path d="m19 8 3 8a5 5 0 0 1-6 0zV7" /> <path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1" /> <path d="m5 8 3 8a5 5 0 0 1-6 0zV7" /> <path d="M7 21h10" />',
+  wifiOff: '<path d="M12 20h.01" /> <path d="M8.5 16.429a5 5 0 0 1 7 0" /> <path d="M5 12.859a10 10 0 0 1 5.17-2.69" /> <path d="M19 12.859a10 10 0 0 0-2.007-1.523" /> <path d="M2 8.82a15 15 0 0 1 4.177-2.643" /> <path d="M22 8.82a15 15 0 0 0-11.288-3.764" /> <path d="m2 2 20 20" />',
+  loaderCircle: '<path d="M21 12a9 9 0 1 1-6.219-8.56" />',
+  brain: '<path d="M12 18V5" /> <path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" /> <path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" /> <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77" /> <path d="M18 18a4 4 0 0 0 2-7.464" /> <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" /> <path d="M6 18a4 4 0 0 1-2-7.464" /> <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77" />',
+  flaskConical: '<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /> <path d="M6.453 15h11.094" /> <path d="M8.5 2h7" />',
+  landmark: '<path d="M10 18v-7" /> <path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z" /> <path d="M14 18v-7" /> <path d="M18 18v-7" /> <path d="M3 22h18" /> <path d="M6 18v-7" />',
+  globe: '<circle cx="12" cy="12" r="10" /> <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /> <path d="M2 12h20" />',
+  music: '<path d="M9 18V5l12-2v13" /> <circle cx="6" cy="18" r="3" /> <circle cx="18" cy="16" r="3" />',
+  clapperboard: '<path d="m12.296 3.464 3.02 3.956" /> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> <path d="m6.18 5.276 3.1 3.899" />',
+  gamepad: '<line x1="6" x2="10" y1="12" y2="12" /> <line x1="8" x2="8" y1="10" y2="14" /> <line x1="15" x2="15.01" y1="13" y2="13" /> <line x1="18" x2="18.01" y1="11" y2="11" /> <rect width="20" height="12" x="2" y="6" rx="2" />',
+  trophy: '<path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2" /> <path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2" /> <path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3" /> <path d="M4 22h16" /> <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" /> <path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3" />',
+  bookOpen: '<path d="M12 5v16" /> <path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />',
+  drama: '<path d="M10 11h.01" /> <path d="M14 6h.01" /> <path d="M18 6h.01" /> <path d="M6.5 13.1h.01" /> <path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3" /> <path d="M17.4 9.9c-.8.8-2 .8-2.8 0" /> <path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7" /> <path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4" />',
+  arrowLeft: '<path d="m12 19-7-7 7-7" /> <path d="M19 12H5" />',
+  arrowRight: '<path d="M5 12h14" /> <path d="m12 5 7 7-7 7" />',
+  send: '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /> <path d="m21.854 2.147-10.94 10.939" />',
+  circleCheck: '<circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" />',
+  circleX: '<circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" />',
+  target: '<circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" />',
+  snowflake: '<path d="m10 20-1.25-2.5L6 18" /> <path d="M10 4 8.75 6.5 6 6" /> <path d="m14 20 1.25-2.5L18 18" /> <path d="m14 4 1.25 2.5L18 6" /> <path d="m17 21-3-6h-4" /> <path d="m17 3-3 6 1.5 3" /> <path d="M2 12h6.5L10 9" /> <path d="m20 10-1.5 2 1.5 2" /> <path d="M22 12h-6.5L14 15" /> <path d="m4 10 1.5 2L4 14" /> <path d="m7 21 3-6-1.5-3" /> <path d="m7 3 3 6h4" />',
+  skull: '<path d="m12.5 17-.5-1-.5 1h1z" /> <path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z" /> <circle cx="15" cy="12" r="1" /> <circle cx="9" cy="12" r="1" />',
+  timer: '<line x1="10" x2="14" y1="2" y2="2" /> <line x1="12" x2="15" y1="14" y2="11" /> <circle cx="12" cy="14" r="8" />',
+};
+function icon(name, cls){
+  return `<svg class="icon${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||""}</svg>`;
+}
+function mountIcons(root=document){
+  root.querySelectorAll("[data-icon]").forEach(el => { el.innerHTML = icon(el.dataset.icon, el.dataset.iconClass); });
+}
+
+/* ============================================================
+   i18n - English / French / Arabic interface strings. Both trivia sources are English-only
+   (ANSWER-IT.md §19), so on a non-English interface, question text/options are additionally
+   machine-translated live per question (see translateQuestion(), further down) - imperfect
+   for proper nouns, which is exactly why `questionsLanguageNote` says so plainly in the setup
+   screen rather than pretending it's a native translation. `dir` on each language drives the
+   whole page's layout direction; Arabic is RTL.
+   ============================================================ */
+const I18N = {
+en: { dir:"ltr", langName:"English",
+  toggleTheme:"Toggle theme", language:"Language",
+  tagline:"Do you know it, and how fast?", playSolo:"Play solo",
+  roomsComingSoon:"Create / join a room - coming soon", roomsTitle:"Multiplayer rooms are coming in the next update",
+  howToPlay:"How to play", credits:"Credits",
+  soloRoundTitle:"Solo round", back:"Back", categoriesTitle:"Categories",
+  catGeneral:"General", catScience:"Science", catHistory:"History", catGeography:"Geography",
+  catMusic:"Music", catScreen:"Film & TV", catGames:"Games", catSport:"Sport", catArts:"Arts", catCulture:"Culture",
+  questionsTitle:"Questions", answerStyleTitle:"Answer style",
+  styleChoice:"With options", styleOpen:"Without options", styleMixed:"Mixed",
+  intensityTitle:"Intensity", intensityChill:"Chill", intensityStandard:"Standard", intensityBrutal:"Brutal", intensityAdaptive:"Adaptive",
+  intensityNoteAdaptive:"Starts at Standard, then shifts toward or away from Hell as you play.",
+  intensityNoteFixed:"Fixed for the whole round.",
+  levelEasy:"Easy", levelMedium:"Medium", levelHard:"Hard", levelHell:"Hell",
+  streaksLabel:"Streaks", streaksSub:"Consecutive correct answers build a score multiplier",
+  hellInsuranceLabel:"Hell Insurance", hellInsuranceSub:"A streak of 3+ survives a missed Hell question at 1, not 0",
+  extendedTimeLabel:"Extended time", extendedTimeSub:"×1.5 on every clock - scored fairly on the same curve",
+  pickCategoryWarning:"Pick at least one category.",
+  startRoundBtn:(n)=>`Start - ${n} + The Double`,
+  questionsLanguageNote:"Questions come from English-only sources and are machine-translated - quality can vary, especially for names.",
+  buildingRound:"Building your round…", fetchingQuestions:"Fetching questions…",
+  toppingUp:(i,total)=>`Topping up thin categories… (${i}/${total})`, cancel:"Cancel",
+  couldntLoad:"Couldn't load questions",
+  errorTooLittle:"Both trivia sources returned too little to build a round. Check your connection and try again.",
+  errorUnreachable:"Both trivia sources are unreachable right now. Check your connection and try again.",
+  tryAgain:"Try again", backToMenu:"Back to menu",
+  questionOf:(i,n)=>`Question ${i} of ${n}`, theDouble:"The Double", streakWord:"streak",
+  typeYourAnswer:"Type your answer…", yourAnswerAria:"Your answer", send:"Send",
+  lockedWaiting:"Locked in - waiting for the clock…",
+  secondsLeft:(n)=>`${n} seconds left`, timesUp:"Time's up",
+  hellQuestionAria:"Hell question", theDoubleAria:"The Double",
+  hellBig:"HELL", hellRush:(s)=>`RUSH - ${s}s, faster clock`, hellBlind:"BLIND - no options, type your answer",
+  hellBasePoints:"2,500 base points", doubleBig:"THE DOUBLE",
+  doubleSub:(score)=>`Everything on this question is worth ×2. Current score: ${score}`,
+  correctAnswerLabel:"Correct answer", disputeNote:"Close enough - counted as correct.",
+  scoreLabel:"Score", next:"Next",
+  roundComplete:"Round complete", newPersonalBest:"New personal best!",
+  newPersonalBestInCategory:(cat)=>`New personal best in ${cat}!`,
+  perCategoryAccuracy:"Per-category accuracy", noQuestionsAnswered:"No questions answered.",
+  awardsTitle:"Awards", playFullRoundForAwards:"Play a full round to earn awards.",
+  reviewYourAnswers:"Review your answers",
+  youAnswerFmt:(you,answer)=>` - you: ${you}, answer: ${answer}`, noAnswer:"(no answer)",
+  playAgain:"Play again", changeSettings:"Change settings",
+  fastestFinger:(s)=>`Fastest Finger - averaged ${s}s per answer`,
+  iceCold:(n)=>`Ice Cold - a ${n}-question streak`,
+  againstAllOdds:"Against All Odds - got a Hell question right",
+  specialist:(cat)=>`Specialist - 100% in ${cat}`,
+  howToPlayTitle:"How to play", howToPlayIntro:"Answer fast, answer right, and don't break your streak.",
+  tableHeaderLevel:"Level", tableHeaderPoints:"Points", tableHeaderClock:"Clock",
+  speedMattersBold:"Speed matters.", speedMattersText:"Instant = full points, last tick = half.",
+  streaksBold:"Streaks", streaksText:" build a multiplier up to ×1.5. Hell questions are worth +2 streak instead of +1 - bigger reward, bigger risk.",
+  theDoubleBold:"The Double", theDoubleText:" always closes the round: one extra question worth ×2, one tier above the hardest you've faced.",
+  wrongAnswersText:"Wrong answers cost you the streak and the points for that question - never your existing score.",
+  gotIt:"Got it", creditsTitle:"Credits",
+  creditsQuestionsFrom:"Questions from", creditsAnd:"and", creditsStack:"Stack, patterns and design language borrowed from Find It.",
+  close:"Close",
+  ranShort:"Ran short on questions - widened the mix to keep the round full length.",
+  toppedUpFrom:(level,nearest)=>`Only a few ${level} questions were available - topped up from ${nearest}.`,
+  ranOutDouble:"Ran out of questions for The Double - ending the round here.",
+  ranOutFresh:(n)=>`Ran out of fresh questions after ${n} - ending the round here.`,
+},
+fr: { dir:"ltr", langName:"Français",
+  toggleTheme:"Changer de thème", language:"Langue",
+  tagline:"Le sais-tu, et à quelle vitesse ?", playSolo:"Jouer en solo",
+  roomsComingSoon:"Créer / rejoindre une salle - bientôt disponible", roomsTitle:"Les salles multijoueurs arrivent dans une prochaine mise à jour",
+  howToPlay:"Comment jouer", credits:"Crédits",
+  soloRoundTitle:"Partie solo", back:"Retour", categoriesTitle:"Catégories",
+  catGeneral:"Général", catScience:"Sciences", catHistory:"Histoire", catGeography:"Géographie",
+  catMusic:"Musique", catScreen:"Cinéma & TV", catGames:"Jeux", catSport:"Sport", catArts:"Arts", catCulture:"Culture",
+  questionsTitle:"Questions", answerStyleTitle:"Style de réponse",
+  styleChoice:"Avec options", styleOpen:"Sans options", styleMixed:"Mixte",
+  intensityTitle:"Intensité", intensityChill:"Détente", intensityStandard:"Standard", intensityBrutal:"Brutal", intensityAdaptive:"Adaptatif",
+  intensityNoteAdaptive:"Commence au niveau Standard, puis évolue vers l'Enfer ou s'en éloigne selon vos réponses.",
+  intensityNoteFixed:"Fixe pour toute la partie.",
+  levelEasy:"Facile", levelMedium:"Moyen", levelHard:"Difficile", levelHell:"Enfer",
+  streaksLabel:"Séries", streaksSub:"Des bonnes réponses consécutives augmentent un multiplicateur de score",
+  hellInsuranceLabel:"Assurance Enfer", hellInsuranceSub:"Une série de 3+ survit à une question Enfer manquée en tombant à 1 au lieu de 0",
+  extendedTimeLabel:"Temps prolongé", extendedTimeSub:"×1,5 sur chaque chrono - noté équitablement sur la même courbe",
+  pickCategoryWarning:"Choisissez au moins une catégorie.",
+  startRoundBtn:(n)=>`Commencer - ${n} + Le Double`,
+  questionsLanguageNote:"Les questions proviennent de sources uniquement en anglais et sont traduites automatiquement - la qualité peut varier, surtout pour les noms propres.",
+  buildingRound:"Préparation de la partie…", fetchingQuestions:"Récupération des questions…",
+  toppingUp:(i,total)=>`Complément des catégories peu fournies… (${i}/${total})`, cancel:"Annuler",
+  couldntLoad:"Impossible de charger les questions",
+  errorTooLittle:"Les deux sources de questions n'en ont pas renvoyé assez pour composer une partie. Vérifiez votre connexion et réessayez.",
+  errorUnreachable:"Les deux sources de questions sont injoignables pour le moment. Vérifiez votre connexion et réessayez.",
+  tryAgain:"Réessayer", backToMenu:"Retour au menu",
+  questionOf:(i,n)=>`Question ${i} sur ${n}`, theDouble:"Le Double", streakWord:"série",
+  typeYourAnswer:"Tapez votre réponse…", yourAnswerAria:"Votre réponse", send:"Envoyer",
+  lockedWaiting:"Réponse verrouillée - en attente du chrono…",
+  secondsLeft:(n)=>`${n} secondes restantes`, timesUp:"Temps écoulé",
+  hellQuestionAria:"Question Enfer", theDoubleAria:"Le Double",
+  hellBig:"ENFER", hellRush:(s)=>`RUSH - ${s}s, chrono accéléré`, hellBlind:"AVEUGLE - pas d'options, tapez votre réponse",
+  hellBasePoints:"2 500 points de base", doubleBig:"LE DOUBLE",
+  doubleSub:(score)=>`Tout ce qui se joue ici compte double. Score actuel : ${score}`,
+  correctAnswerLabel:"Bonne réponse", disputeNote:"Assez proche - comptée comme correcte.",
+  scoreLabel:"Score", next:"Suivant",
+  roundComplete:"Partie terminée", newPersonalBest:"Nouveau record personnel !",
+  newPersonalBestInCategory:(cat)=>`Nouveau record personnel en ${cat} !`,
+  perCategoryAccuracy:"Précision par catégorie", noQuestionsAnswered:"Aucune question répondue.",
+  awardsTitle:"Récompenses", playFullRoundForAwards:"Terminez une partie complète pour gagner des récompenses.",
+  reviewYourAnswers:"Revoir vos réponses",
+  youAnswerFmt:(you,answer)=>` - vous : ${you}, réponse : ${answer}`, noAnswer:"(aucune réponse)",
+  playAgain:"Rejouer", changeSettings:"Modifier les réglages",
+  fastestFinger:(s)=>`Doigts d'or - moyenne de ${s}s par réponse`,
+  iceCold:(n)=>`Sang-froid - une série de ${n} questions`,
+  againstAllOdds:"Contre toute attente - une question Enfer réussie",
+  specialist:(cat)=>`Spécialiste - 100 % en ${cat}`,
+  howToPlayTitle:"Comment jouer", howToPlayIntro:"Répondez vite, répondez juste, et ne cassez pas votre série.",
+  tableHeaderLevel:"Niveau", tableHeaderPoints:"Points", tableHeaderClock:"Chrono",
+  speedMattersBold:"La vitesse compte.", speedMattersText:"Instantané = points complets, dernière seconde = moitié.",
+  streaksBold:"Séries", streaksText:" : un multiplicateur qui monte jusqu'à ×1,5. Les questions Enfer valent +2 sur la série au lieu de +1 - plus de récompense, plus de risque.",
+  theDoubleBold:"Le Double", theDoubleText:" clôt toujours la partie : une question supplémentaire qui vaut ×2, un niveau au-dessus du plus dur que vous ayez affronté.",
+  wrongAnswersText:"Une mauvaise réponse vous coûte la série et les points de cette question - jamais votre score déjà acquis.",
+  gotIt:"Compris", creditsTitle:"Crédits",
+  creditsQuestionsFrom:"Questions fournies par", creditsAnd:"et", creditsStack:"Approche technique, motifs et langage visuel repris de Find It.",
+  close:"Fermer",
+  ranShort:"Questions insuffisantes - le mix a été élargi pour garder la partie complète.",
+  toppedUpFrom:(level,nearest)=>`Peu de questions ${level} disponibles - complété avec du niveau ${nearest}.`,
+  ranOutDouble:"Plus de questions disponibles pour Le Double - fin de la partie ici.",
+  ranOutFresh:(n)=>`Plus de questions disponibles après ${n} - fin de la partie ici.`,
+},
+ar: { dir:"rtl", langName:"العربية",
+  toggleTheme:"تبديل المظهر", language:"اللغة",
+  tagline:"هل تعرف الإجابة، وبأي سرعة؟", playSolo:"العب منفردًا",
+  roomsComingSoon:"إنشاء / الانضمام إلى غرفة - قريبًا", roomsTitle:"غرف اللعب الجماعي قادمة في التحديث القادم",
+  howToPlay:"كيفية اللعب", credits:"الشكر والتقدير",
+  soloRoundTitle:"جولة فردية", back:"رجوع", categoriesTitle:"الفئات",
+  catGeneral:"معلومات عامة", catScience:"العلوم", catHistory:"التاريخ", catGeography:"الجغرافيا",
+  catMusic:"الموسيقى", catScreen:"السينما والتلفاز", catGames:"الألعاب", catSport:"الرياضة", catArts:"الفنون", catCulture:"المجتمع والثقافة",
+  questionsTitle:"عدد الأسئلة", answerStyleTitle:"نمط الإجابة",
+  styleChoice:"مع خيارات", styleOpen:"بدون خيارات", styleMixed:"مختلط",
+  intensityTitle:"شدة الصعوبة", intensityChill:"هادئ", intensityStandard:"عادي", intensityBrutal:"قاسِّ", intensityAdaptive:"تكيفي",
+  intensityNoteAdaptive:"يبدأ عند المستوى العادي، ثم يتغيّر نحو الجحيم أو بعيدًا عنه حسب أدائك.",
+  intensityNoteFixed:"ثابت طوال الجولة.",
+  levelEasy:"سهل", levelMedium:"متوسط", levelHard:"صعب", levelHell:"جحيم",
+  streaksLabel:"التتابع", streaksSub:"الإجابات الصحيحة المتتالية تزيد مضاعف النقاط",
+  hellInsuranceLabel:"تأمين الجحيم", hellInsuranceSub:"عند تتابع 3 إجابات أو أكثر، الفشل في سؤال جحيم يُبقي التتابع عند 1 بدلاً من الصفر",
+  extendedTimeLabel:"وقت إضافي", extendedTimeSub:"×1.5 على كل مؤقّت - يُحتسب بعدل على نفس المعيار",
+  pickCategoryWarning:"اختر فئة واحدة على الأقل.",
+  startRoundBtn:(n)=>`ابدأ - ${n} + السؤال المضاعف`,
+  questionsLanguageNote:"الأسئلة تأتي من مصادر إنجليزية فقط وتُترجم آليًا - قد تتفاوت الجودة، خصوصًا في الأسماء.",
+  buildingRound:"جارٍ تجهيز الجولة…", fetchingQuestions:"جارٍ جلب الأسئلة…",
+  toppingUp:(i,total)=>`جارٍ استكمال الفئات الناقصة… (${i}/${total})`, cancel:"إلغاء",
+  couldntLoad:"تعذّر تحميل الأسئلة",
+  errorTooLittle:"لم يُرجع أي من مصدري الأسئلة عددًا كافيًا لتكوين جولة. تحقق من اتصالك وحاول مجددًا.",
+  errorUnreachable:"تعذّر الوصول إلى مصدري الأسئلة حاليًا. تحقق من اتصالك وحاول مجددًا.",
+  tryAgain:"حاول مجددًا", backToMenu:"العودة إلى القائمة",
+  questionOf:(i,n)=>`السؤال ${i} من ${n}`, theDouble:"السؤال المضاعف", streakWord:"تتابع",
+  typeYourAnswer:"اكتب إجابتك…", yourAnswerAria:"إجابتك", send:"إرسال",
+  lockedWaiting:"تم قفل الإجابة - بانتظار انتهاء الوقت…",
+  secondsLeft:(n)=>`تبقّى ${n} ثوانٍ`, timesUp:"انتهى الوقت",
+  hellQuestionAria:"سؤال جحيم", theDoubleAria:"السؤال المضاعف",
+  hellBig:"جحيم", hellRush:(s)=>`اندفاع - ${s} ثانية، مؤقّت أسرع`, hellBlind:"أعمى - بلا خيارات، اكتب إجابتك",
+  hellBasePoints:"2500 نقطة أساسية", doubleBig:"السؤال المضاعف",
+  doubleSub:(score)=>`كل شيء في هذا السؤال يُحتسب ×2. النتيجة الحالية: ${score}`,
+  correctAnswerLabel:"الإجابة الصحيحة", disputeNote:"قريبة بما يكفي - احتُسبت كإجابة صحيحة.",
+  scoreLabel:"النتيجة", next:"التالي",
+  roundComplete:"انتهت الجولة", newPersonalBest:"رقم قياسي شخصي جديد!",
+  newPersonalBestInCategory:(cat)=>`رقم قياسي شخصي جديد في ${cat}!`,
+  perCategoryAccuracy:"الدقة حسب الفئة", noQuestionsAnswered:"لم تتم الإجابة عن أي سؤال.",
+  awardsTitle:"الجوائز", playFullRoundForAwards:"أكمل جولة كاملة للحصول على جوائز.",
+  reviewYourAnswers:"مراجعة إجاباتك",
+  youAnswerFmt:(you,answer)=>` - إجابتك: ${you}، الصحيحة: ${answer}`, noAnswer:"(بلا إجابة)",
+  playAgain:"العب مجددًا", changeSettings:"تعديل الإعدادات",
+  fastestFinger:(s)=>`أسرع إصبع - بمعدل ${s} ثانية لكل إجابة`,
+  iceCold:(n)=>`أعصاب باردة - تتابع ${n} أسئلة`,
+  againstAllOdds:"رغم كل الصعاب - إجابة صحيحة على سؤال جحيم",
+  specialist:(cat)=>`متخصص - 100% في ${cat}`,
+  howToPlayTitle:"كيفية اللعب", howToPlayIntro:"أجب بسرعة، أجب بصحة، ولا تكسر تتابعك.",
+  tableHeaderLevel:"المستوى", tableHeaderPoints:"النقاط", tableHeaderClock:"المؤقّت",
+  speedMattersBold:"السرعة مهمة.", speedMattersText:"إجابة فورية = نقاط كاملة، آخر لحظة = نصف النقاط.",
+  streaksBold:"التتابع", streaksText:": مضاعف يرتفع حتى ×1.5. أسئلة الجحيم تضيف 2 للتتابع بدلاً من 1 - مكافأة أكبر، ومخاطرة أكبر.",
+  theDoubleBold:"السؤال المضاعف", theDoubleText:" يختم الجولة دائمًا: سؤال إضافي يُحتسب ×2، بمستوى أعلى من أصعب ما واجهته.",
+  wrongAnswersText:"الإجابة الخاطئة تكلّفك التتابع ونقاط ذلك السؤال فقط - ولا تمس نتيجتك المكتسبة أبدًا.",
+  gotIt:"فهمت", creditsTitle:"الشكر والتقدير",
+  creditsQuestionsFrom:"الأسئلة مقدّمة من", creditsAnd:"و", creditsStack:"البنية التقنية والأنماط ولغة التصميم مأخوذة من Find It.",
+  close:"إغلاق",
+  ranShort:"نفدت الأسئلة - تم توسيع المزيج للحفاظ على طول الجولة.",
+  toppedUpFrom:(level,nearest)=>`تتوفّر أسئلة قليلة من مستوى ${level} - تم الاستكمال من مستوى ${nearest}.`,
+  ranOutDouble:"نفدت الأسئلة الخاصة بالسؤال المضاعف - انتهت الجولة هنا.",
+  ranOutFresh:(n)=>`نفدت الأسئلة الجديدة بعد ${n} - انتهت الجولة هنا.`,
+},
+};
+
+const LANG_KEY = "answerit_lang";
+function detectLanguage(){
+  try { const saved = localStorage.getItem(LANG_KEY); if (saved && I18N[saved]) return saved; } catch {}
+  const candidates = (navigator.languages || [navigator.language || "en"]).map(l => l.slice(0,2).toLowerCase());
+  return candidates.find(c => I18N[c]) || "en";
+}
+let lang = detectLanguage();
+function t(key, ...args){
+  const dict = I18N[lang] || I18N.en;
+  const val = dict[key] !== undefined ? dict[key] : I18N.en[key];
+  return typeof val === "function" ? val(...args) : val;
+}
+// Back/Next are the only icons whose *meaning* (not just position) depends on reading
+// direction - everything else in the layout mirrors for free via flexbox row-reversal under
+// dir="rtl", but an arrow that means "back" has to visibly point the other way in Arabic.
+function navIcon(logical){
+  const rtl = I18N[lang].dir === "rtl";
+  if (logical === "back") return rtl ? "arrowRight" : "arrowLeft";
+  return rtl ? "arrowLeft" : "arrowRight";
+}
+function mountI18n(root=document){
+  root.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  root.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  root.querySelectorAll("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+  root.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+}
+function applyLanguage(newLang){
+  lang = I18N[newLang] ? newLang : "en";
+  try { localStorage.setItem(LANG_KEY, lang); } catch {}
+  document.documentElement.lang = lang;
+  document.documentElement.dir = I18N[lang].dir;
+  const sel = $("langSel"); if (sel) sel.value = lang;
+  mountI18n();
+  $("setupBack").innerHTML = icon(navIcon("back"));
+  $("revealNext").innerHTML = `${t("next")} ${icon(navIcon("forward"))}`;
+  renderCatGrid();
+  refreshSetup();
+}
+
+function toast(msg, ms=4200){
+  const wrap = $("toast-wrap");
+  const el = document.createElement("div");
+  el.className = "toast"; el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+
+let screenHistory = [];
+function show(id, opts={}){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+  if (!opts.silent) window.scrollTo(0,0);
+}
+
+/* ============================================================
+   Theme (mirrors find-it-site's pattern)
+   ============================================================ */
+const THEME_KEY = "answerit_theme";
+let savedTheme = null;
+try { savedTheme = localStorage.getItem(THEME_KEY); } catch {}
+const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+let theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : (prefersLight ? "light" : "dark");
+let themeLocked = theme === savedTheme;
+function applyTheme(t){
+  theme = t;
+  document.documentElement.setAttribute("data-theme", t);
+  $("themeBtn").innerHTML = icon(t === "dark" ? "moon" : "sun");
+}
+applyTheme(theme);
+on($("themeBtn"), "click", () => {
+  themeLocked = true;
+  applyTheme(theme === "dark" ? "light" : "dark");
+  try { localStorage.setItem(THEME_KEY, theme); } catch {}
+});
+if (window.matchMedia){
+  const mq = window.matchMedia("(prefers-color-scheme: light)");
+  const onChange = e => { if (!themeLocked) applyTheme(e.matches ? "light" : "dark"); };
+  mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
+}
+const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+on($("langSel"), "change", (e) => applyLanguage(e.target.value));
+
+/* ============================================================
+   Confetti - ported verbatim from find-it-site/index.html
+   ============================================================ */
+const confetti = (() => {
+  const cv = $("fx");
+  const ctx = cv.getContext ? cv.getContext("2d") : null;
+  if (!ctx) return { burst(){}, stop(){} };
+  const themeColors = () => {
+    const cs = getComputedStyle(document.documentElement);
+    const v = n => (cs.getPropertyValue(n) || "").trim();
+    return [v("--lvl-easy"), v("--lvl-medium"), v("--lvl-hard"), v("--lvl-hell"), v("--accent"), v("--accent-2")].filter(Boolean);
+  };
+  let COLORS = ["#39d98a","#6ea8ff","#b58cff","#ffc247","#ff6b6b","#ffffff"];
+  let parts = [], raf = null;
+  function size(){
+    const d = window.devicePixelRatio || 1;
+    cv.width = innerWidth * d; cv.height = innerHeight * d;
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  addEventListener("resize", () => { if (raf) size(); });
+  function spawn(count, originX){
+    for (let i = 0; i < count; i++){
+      parts.push({
+        x: originX, y: innerHeight * 0.42 + (Math.random() - .5) * 40,
+        vx: (Math.random() - .5) * 13, vy: -6 - Math.random() * 11,
+        w: 6 + Math.random() * 7, h: 9 + Math.random() * 9,
+        rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .3,
+        c: COLORS[(Math.random() * COLORS.length) | 0], life: 1
+      });
+    }
+  }
+  function frame(){
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter(p => p.life > 0 && p.y < innerHeight + 60);
+    for (const p of parts){
+      p.vy += 0.32; p.vx *= 0.995; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      if (p.y > innerHeight * 0.75) p.life -= 0.012;
+      ctx.save(); ctx.globalAlpha = Math.max(0, p.life);
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * (0.4 + 0.6 * Math.abs(Math.cos(p.rot))));
+      ctx.restore();
+    }
+    if (parts.length) raf = requestAnimationFrame(frame); else stop();
+  }
+  function burst(){
+    if (reduceMotion) return;
+    size();
+    const tc = themeColors(); if (tc.length) COLORS = tc;
+    cv.classList.remove("hide");
+    spawn(70, innerWidth * 0.25); spawn(70, innerWidth * 0.75);
+    setTimeout(() => spawn(60, innerWidth * 0.5), 220);
+    setTimeout(() => { spawn(45, innerWidth * 0.15); spawn(45, innerWidth * 0.85); }, 520);
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+  function stop(){
+    if (raf) cancelAnimationFrame(raf);
+    raf = null; parts = [];
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    cv.classList.add("hide");
+  }
+  return { burst, stop };
+})();
+
+/* ============================================================
+   GAME CORE - mirrors worker/src/game-core.js exactly (kept in sync by hand; that file is
+   the reference copy). Duplicated here - not imported - because a real ES module import
+   across files is blocked by CORS the moment this page is opened via file:// instead of
+   http(s), and "open index.html and it works, no server" is a deliberate property of solo
+   play (see ANSWER-IT.md §6.2). See worker/src/game-core.js for section-by-section citations.
+   ============================================================ */
+const LEVELS = ["easy", "medium", "hard", "hell"];
+const BASE_POINTS = { easy: 600, medium: 1000, hard: 1500, hell: 2500 };
+const TIME_LIMITS = { choice: { easy:15, medium:20, hard:25, hell:35 }, open: { easy:25, medium:30, hard:35, hell:45 } };
+const STREAK_GAIN = { easy:1, medium:1, hard:1, hell:2 };
+const PROFILES = {
+  chill:    { easy:.55, medium:.30, hard:.12, hell:.03 },
+  standard: { easy:.40, medium:.35, hard:.20, hell:.05 },
+  brutal:   { easy:.20, medium:.30, hard:.35, hell:.15 },
+};
+const ADAPTIVE_BOUNDS = {
+  easy:{floor:.15,ceiling:.55}, medium:{floor:.20,ceiling:.45}, hard:{floor:.10,ceiling:.40}, hell:{floor:.03,ceiling:.15},
+};
+
+function streakMultiplier(streak){ return Math.min(1 + Math.max(0, streak - 1) * 0.1, 1.5); }
+function timeFactor(responseTimeMs, timeLimitS){
+  const f = 1 - 0.5 * (responseTimeMs / (timeLimitS*1000));
+  return clamp(f, 0.5, 1);
+}
+function scoreAnswer({ level, type, isDouble, responseTimeMs, streakBefore, correct, hellInsurance }){
+  if (!correct){
+    const insured = hellInsurance && level === "hell" && streakBefore >= 3;
+    return { points:0, streakAfter: insured ? 1 : 0, timeFactor:0, multiplier:0 };
+  }
+  const limit = TIME_LIMITS[type][level];
+  const tf = timeFactor(responseTimeMs, limit);
+  const streakAfter = streakBefore + STREAK_GAIN[level];
+  const mult = streakMultiplier(streakAfter);
+  const doubleMult = isDouble ? 2 : 1;
+  const points = Math.round(BASE_POINTS[level] * tf * mult * doubleMult);
+  return { points, streakAfter, timeFactor: tf, multiplier: mult };
+}
+function allocateCounts(n, profile){
+  const raw={}, floor={}, rem={};
+  for (const L of LEVELS){ raw[L]=n*profile[L]; floor[L]=Math.floor(raw[L]); rem[L]=raw[L]-floor[L]; }
+  let leftover = n - LEVELS.reduce((s,L)=>s+floor[L],0);
+  const order = [...LEVELS].sort((a,b)=>(rem[b]-rem[a])||(LEVELS.indexOf(b)-LEVELS.indexOf(a)));
+  for (let i=0;i<leftover;i++) floor[order[i]]++;
+  if (n>=8){
+    for (const L of LEVELS){
+      while (floor[L]===0){
+        const donor = LEVELS.reduce((a,b)=>floor[a]>=floor[b]?a:b);
+        if (floor[donor]<=1) break;
+        floor[donor]--; floor[L]++;
+      }
+    }
+  }
+  return floor;
+}
+function rollingAccuracy(outcomes){
+  const last5 = outcomes.slice(-5);
+  if (!last5.length) return 0.60;
+  return last5.filter(Boolean).length / last5.length;
+}
+function clampRenormalize(profile){
+  const p = {...profile}; const pinned = new Set();
+  for (let pass=0; pass<4; pass++){
+    let delta=0;
+    for (const L of LEVELS){
+      if (pinned.has(L)) continue;
+      const {floor,ceiling} = ADAPTIVE_BOUNDS[L];
+      if (p[L]>ceiling){ delta += p[L]-ceiling; p[L]=ceiling; pinned.add(L); }
+      else if (p[L]<floor){ delta -= floor-p[L]; p[L]=floor; pinned.add(L); }
+    }
+    if (Math.abs(delta)<1e-9) break;
+    const free = LEVELS.filter(L=>!pinned.has(L));
+    if (!free.length) break;
+    const freeTotal = free.reduce((s,L)=>s+p[L],0);
+    for (const L of free) p[L] += freeTotal>0 ? delta*(p[L]/freeTotal) : delta/free.length;
+  }
+  return p;
+}
+function adaptiveProfile(accuracy){
+  const s = clamp((accuracy-0.60)*0.8, -0.35, 0.35);
+  return clampRenormalize({
+    easy: PROFILES.standard.easy - 0.6*s, medium: PROFILES.standard.medium - 0.4*s,
+    hard: PROFILES.standard.hard + 0.7*s, hell: PROFILES.standard.hell + 0.3*s,
+  });
+}
+function levelEligibleAt(level, pos, n, placedLevels){
+  const third = Math.ceil(n/3);
+  if (pos===0) return level==="easy";
+  if (level==="hell" && pos<third) return false;
+  if (level==="hell" && placedLevels[placedLevels.length-1]==="hell") return false;
+  if (level==="hard" && pos<third && n-pos>third) return false;
+  const last2 = placedLevels.slice(-2);
+  if (last2.length===2 && last2[0]===level && last2[1]===level) return false;
+  return true;
+}
+function pickHellQuestion(hardPool, { allowBlind }){
+  const niche = hardPool.filter(q=>q.isNiche);
+  if (niche.length) return { question: niche[Math.floor(Math.random()*niche.length)], modifier: null };
+  if (!hardPool.length) return null;
+  const base = hardPool[Math.floor(Math.random()*hardPool.length)];
+  const modifier = allowBlind && Math.random()<0.5 ? "blind" : "rush";
+  return { question: base, modifier };
+}
+function applyHellModifier(question, modifier){
+  const q = { ...question, level:"hell", modifiers: modifier ? [modifier] : [] };
+  if (modifier==="blind"){ q.type="open"; q.options=null; }
+  return q;
+}
+function finalizeTimeLimit(q, extended){
+  const base = TIME_LIMITS[q.type][q.level];
+  const withRush = q.modifiers?.includes("rush") ? Math.round(base*0.6) : base;
+  return extended ? Math.round(withRush*1.5) : withRush;
+}
+function doubleLevel(servedLevels){
+  const maxIdx = servedLevels.reduce((m,L)=>Math.max(m, LEVELS.indexOf(L)), 0);
+  return LEVELS[Math.min(maxIdx+1, LEVELS.length-1)];
+}
+
+/* ---------------- Open-answer matching (§10.2) ---------------- */
+const LEADING_ARTICLES = /^(the|a|an|le|la)\s+/;
+const ONES = {zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+const TENS = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+function normalizeAnswer(input){
+  let s = String(input).toLowerCase().replace(/^l['’]/, "");
+  s = s.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  s = s.replace(/[^\p{L}\p{N}\s]/gu, "");
+  s = s.replace(/\s+/g," ").trim();
+  s = s.replace(LEADING_ARTICLES, "").trim();
+  return s;
+}
+function stripParenthetical(s){ return String(s).replace(/\s*\([^)]*\)/g,"").trim(); }
+const ALIAS_GROUPS = [
+  ["usa","united states","united states of america","america"],
+  ["uk","united kingdom","britain","great britain"],
+  ["russia","russian federation"],
+  ["south korea","korea","republic of korea"],
+  ["north korea","dprk"],
+  ["netherlands","holland"],
+  ["china","peoples republic of china","prc"],
+  ["ivory coast","cote divoire"],
+  ["czech republic","czechia"],
+  ["myanmar","burma"],
+  ["drc","democratic republic of congo","congo"],
+  ["swaziland","eswatini"],
+  ["uae","united arab emirates"],
+  ["ussr","soviet union"],
+];
+function buildAccepted(correctAnswer){
+  const set = new Set();
+  const add = s => { const n = normalizeAnswer(s); if (n) set.add(n); };
+  add(correctAnswer); add(stripParenthetical(correctAnswer));
+  const base = normalizeAnswer(correctAnswer);
+  for (const group of ALIAS_GROUPS) if (group.includes(base)) for (const alt of group) set.add(alt);
+  return [...set];
+}
+function levenshtein(a,b){
+  const m=a.length,n=b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({length:n+1},(_,j)=>j);
+  for (let i=1;i<=m;i++){
+    const cur=[i];
+    for (let j=1;j<=n;j++) cur[j] = a[i-1]===b[j-1] ? prev[j-1] : 1+Math.min(prev[j],cur[j-1],prev[j-1]);
+    prev=cur;
+  }
+  return prev[n];
+}
+function wordsToNumber(str){
+  const words = String(str).toLowerCase().replace(/-/g," ").replace(/\band\b/g," ").split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  let total=0,current=0,matched=false;
+  for (const w of words){
+    if (w in ONES){ current+=ONES[w]; matched=true; }
+    else if (w in TENS){ current+=TENS[w]; matched=true; }
+    else if (w==="hundred"){ current=(current||1)*100; matched=true; }
+    else if (w==="thousand"){ total+=(current||1)*1000; current=0; matched=true; }
+    else if (w==="million"){ total+=(current||1)*1000000; current=0; matched=true; }
+    else return null;
+  }
+  return matched ? total+current : null;
+}
+function toNumber(s){
+  const cleaned = String(s).replace(/,/g,"").trim();
+  if (cleaned!=="" && !isNaN(Number(cleaned))) return Number(cleaned);
+  return wordsToNumber(s);
+}
+function matchOpenAnswer(submitted, correctAnswer, accepted){
+  const subN = normalizeAnswer(submitted);
+  if (!subN) return "wrong";
+  const ansN = normalizeAnswer(correctAnswer);
+  if (subN===ansN || accepted.includes(subN)) return "correct";
+  const dist = levenshtein(subN, ansN);
+  const len = ansN.length || 1;
+  if (dist <= Math.ceil(len/6)) return "correct";
+  const subNum = toNumber(submitted), ansNum = toNumber(correctAnswer);
+  if (subNum!==null && ansNum!==null && subNum===ansNum) return "correct";
+  const wholeWordHit = new RegExp(`(^|\\s)${ansN.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}(\\s|$)`).test(subN);
+  if (dist <= Math.ceil(len/3) || wholeWordHit) return "dispute";
+  return "wrong";
+}
+
+/* ============================================================
+   SOURCES - mirrors worker/src/sources.js (see that file for citations).
+   ============================================================ */
+const CATEGORIES = [
+  { key:"general", icon:"brain" },
+  { key:"science", icon:"flaskConical" },
+  { key:"history", icon:"landmark" },
+  { key:"geography", icon:"globe" },
+  { key:"music", icon:"music" },
+  { key:"screen", icon:"clapperboard" },
+  { key:"games", icon:"gamepad" },
+  { key:"sport", icon:"trophy" },
+  { key:"arts", icon:"bookOpen" },
+  { key:"culture", icon:"drama" },
+];
+const CATEGORY_KEYS = CATEGORIES.map(c=>c.key);
+// Label lookup keys follow "cat"/"level" + Capitalized(key) for every category and level -
+// verified to hold for all 10 categories and all 4 levels, so one small helper covers both
+// rather than a second translation table duplicating CATEGORIES/LEVELS.
+function catLabel(key){ return t("cat"+key[0].toUpperCase()+key.slice(1)); }
+function levelName(level){ return t("level"+level[0].toUpperCase()+level.slice(1)); }
+const CAT_BY_KEY = Object.fromEntries(CATEGORIES.map(c=>[c.key,c]));
+const TRIVIA_API_CATEGORIES = {
+  general:["general_knowledge"], science:["science"], history:["history","politics"],
+  geography:["geography"], music:["music"], screen:["film_and_tv"], games:[],
+  sport:["sport_and_leisure"], arts:["arts_and_literature"], culture:["society_and_culture","food_and_drink"],
+};
+const TRIVIA_API_TAGS = { games:["video_games","board_games"] };
+const TRIVIA_TO_ANSWERIT = {};
+for (const [ourKey, apiKeys] of Object.entries(TRIVIA_API_CATEGORIES)) for (const ak of apiKeys) TRIVIA_TO_ANSWERIT[ak] = ourKey;
+const OPENTDB_CATEGORIES = {
+  general:[9], science:[17,18,19,30,27], history:[23,24], geography:[22], music:[12,13],
+  screen:[11,14,32], games:[15,16,31,29], sport:[21], arts:[10,25], culture:[20,26,28],
+};
+
+const MAX_QUESTION_LEN = 180, MIN_ANSWER_LEN = 2;
+function shuffleArr(arr){
+  const a=[...arr];
+  for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function normalizeQuestion(raw, source, categoryKey){
+  if (source==="trivia-api"){
+    const text = String(raw.question?.text||"").trim();
+    const correct = String(raw.correctAnswer||"").trim();
+    const incorrect = (raw.incorrectAnswers||[]).map(s=>String(s).trim());
+    if (!text || text.length>MAX_QUESTION_LEN || correct.length<MIN_ANSWER_LEN) return null;
+    const options = shuffleArr([correct, ...incorrect]);
+    return { id: raw.id, source:"trivia-api", text, category:categoryKey, level:raw.difficulty, type:"choice",
+      options, answerIndex: options.indexOf(correct), accepted: buildAccepted(correct), modifiers:[], timeLimit:null,
+      media:null, isNiche: !!raw.isNiche, correctAnswer: correct };
+  }
+  if (source==="opentdb"){
+    const dec = s => { try { return decodeURIComponent(s); } catch { return s; } };
+    const text = dec(String(raw.question||"")).trim();
+    const correct = dec(String(raw.correct_answer||"")).trim();
+    const incorrect = (raw.incorrect_answers||[]).map(s=>dec(String(s)).trim());
+    if (!text || text.length>MAX_QUESTION_LEN || correct.length<MIN_ANSWER_LEN) return null;
+    const options = shuffleArr([correct, ...incorrect]);
+    return { id:`otdb:${categoryKey}:${raw.difficulty}:${text.slice(0,40)}`, source:"opentdb", text, category:categoryKey,
+      level:raw.difficulty, type:"choice", options, answerIndex: options.indexOf(correct), accepted: buildAccepted(correct),
+      modifiers:[], timeLimit:null, media:null, isNiche:false, correctAnswer: correct };
+  }
+  return null;
+}
+async function fetchJson(url, timeoutMs=8000){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeoutMs);
+  try { const res = await fetch(url, {signal:controller.signal}); if (!res.ok) return null; return await res.json(); }
+  catch { return null; } finally { clearTimeout(timer); }
+}
+async function fetchTriviaApi({categories=[], tags=[], limit=50, difficulties=["easy","medium","hard"]}={}){
+  const p = new URLSearchParams();
+  p.set("limit", String(Math.min(50,limit))); p.set("difficulties", difficulties.join(","));
+  if (categories.length) p.set("categories", categories.join(","));
+  if (tags.length) p.set("tags", tags.join(","));
+  const data = await fetchJson(`https://the-trivia-api.com/v2/questions?${p}`);
+  return Array.isArray(data) ? data : [];
+}
+async function fetchOpenTDB({categoryId, difficulty, amount=50}={}){
+  const p = new URLSearchParams({ amount:String(Math.min(50,amount)), category:String(categoryId), difficulty, type:"multiple", encode:"url3986" });
+  const data = await fetchJson(`https://opentdb.com/api.php?${p}`);
+  if (!data || data.response_code!==0) return [];
+  return data.results||[];
+}
+function createThrottle(minIntervalMs){
+  let last=0;
+  return async function wait(){
+    const now=Date.now(); const delay=Math.max(0, last+minIntervalMs-now);
+    last = now+delay;
+    if (delay) await new Promise(r=>setTimeout(r,delay));
+  };
+}
+
+/* ============================================================
+   Round building (solo - direct browser fetch, §6.2)
+   ============================================================ */
+// ---------------------------------------------------------------------------------------
+// QUALITY GATE - mirrors worker/src/quality.js (kept in sync by hand, same rule as the game
+// core mirror above). Everything an API hands us goes through gradeQuestion() before it can
+// enter the pool; the curated bank in bank/curated-core.js is written to pass it and enters
+// pre-scored. See ANSWER-IT.md §6.5 and QUESTIONS.md.
+// ---------------------------------------------------------------------------------------
+
+const MIN_BANK_SCORE = 66; // tuned against a live sample - see QUESTIONS.md
+
+// Curated questions sort above every API question in a bucket - that is the whole hybrid.
+const CURATED_SCORE = 95;
+
+/* ============================================================
+   §6.5.1 - Hard rejects
+   ============================================================ */
+
+const MIN_QUESTION_LEN = 20;   // MAX_QUESTION_LEN (180) is already declared by the sources mirror above
+const MAX_ANSWER_LEN = 45;   // longer than this and nobody can type it, or read it under 15s
+const MIN_ANSWER_LEN_OPEN = 2;   // "K" is a fine multiple-choice answer and a terrible typed one
+
+// Meta-phrasings that only make sense on a paper quiz, plus questions that lean on media we
+// don't have (§22 image/audio questions are parked).
+const BAD_PHRASING = [
+  /which of the following/i,
+  /\ball of the above\b/i,
+  /\bnone of the above\b/i,
+  /\b(pictured|shown|depicted) (above|below|here)\b/i,
+  /\bin the (image|picture|photo|video|clip)\b/i,
+  /\bthis (song|image|picture|clip|logo)\b/i,
+  /\bfill in the blank\b/i,
+  /\b(true or false)\b/i,
+  /_{3,}/,                              // fill-in-the-gap templates
+];
+
+// "Correct as of when?" questions rot. Anything scoped to a past year is out.
+const STALE = /\bas of\s+(19|20)\d\d\b|\bin\s+20(0\d|1\d|2[0-5])\b(?=[^?]*\bcurrently\b)/i;
+
+// Domestic-only material: the single biggest driver of "these questions aren't for us".
+// Deliberately narrow - it kills leagues/soaps/civics that only land in one country, and leaves
+// globally-followed things (Premier League, NBA, Olympics, Hollywood) alone.
+const PAROCHIAL = [
+  /\bNFL\b|\bNASCAR\b|\bSuper Bowl\b|\bMajor League Baseball\b|\bMLB\b|\bNHL\b/i,
+  /\bAmerican football\b|\bWorld Series\b|\bStanley Cup\b/i,
+  /\b(which|what)\s+(U\.?S\.?|American|British|English|Australian|Canadian)\s+(state|county|city|town|province|shire)\b/i,
+  /\bstate capital\b|\bcounty in (England|Ireland|Wales|Scotland)\b/i,
+  /\bEastEnders\b|\bCoronation Street\b|\bHollyoaks\b|\bNeighbours\b|\bHome and Away\b/i,
+  /\bSaturday Night Live\b|\bJeopardy!?\b|\bWheel of Fortune\b/i,
+  /\bcongressman\b|\bsenator from\b|\bMember of Parliament for\b/i,
+  /\bA-?Level\b|\bGCSE\b|\bSAT\b(?!\w)/i,
+];
+
+// ---- Tag policy (The Trivia API only; OpenTDB ships no tags) --------------------------------
+// Tags turn out to be the single most useful quality signal the API gives us - far better than
+// `difficulty`. Three buckets:
+
+// 1. Straight out. Domestic-league sport, gambling, and one-hit-wonder nostalgia are the exact
+//    material that made the first playtest fall flat.
+const TAG_REJECT = new Set([
+  "us_states", "american_football", "nfl", "baseball", "mlb", "nascar", "horse_racing",
+  "gambling", "casinos", "one_hit_wonders", "soap_operas", "british_sitcoms", "nhl",
+  "college_football", "college_basketball", "rodeo", "poker",
+]);
+
+// 2. Fandom deep-cuts. Fine as *Hell* material, never as the easy/medium body of a round.
+const DEEP_CUT_TAGS = new Set([
+  "warhammer", "magic_the_gathering", "yu_gi_oh", "runescape", "world_of_warcraft",
+  "elder_scrolls", "star_trek", "doctor_who", "my_little_pony", "gundam", "cult_films",
+]);
+
+// 3. Soft penalties. A question tagged for one country, or for a decade most of the room did not
+//    live through, is not *wrong* - it just loses to a question that travels.
+const COUNTRY_TAGS = new Set([
+  "usa", "uk", "england", "scotland", "wales", "ireland", "northern_ireland",
+  "australia", "new_zealand", "canada", "ohio", "texas", "california", "florida",
+]);
+const DECADE_TAGS = /^(19[0-8]0)('?s)?$/;
+const DRY_TAGS = new Set(["words", "language", "etymology", "vocabulary", "measurements"]);
+
+// "Which Heavweight Boxer Was Known As The Real Deal?" - capitalising every word correlates
+// almost perfectly with sloppy, mis-spelled, user-submitted entries.
+function isTitleCased(text) {
+  const words = text.split(/\s+/).filter((w) => /^[A-Za-z]{4,}$/.test(w));
+  if (words.length < 4) return false;
+  const caps = words.filter((w) => /^[A-Z]/.test(w)).length;
+  return caps / words.length > 0.7;
+}
+
+const YEAR_RE = /^(1[0-9]{3}|20[0-9]{2})$/;
+const NUMERIC_RE = /^-?[\d.,]+$/;
+
+function isYearSet(options) {
+  return options.length > 1 && options.every((o) => YEAR_RE.test(o.trim()));
+}
+
+function numericSpread(options) {
+  const nums = options.map((o) => Number(String(o).replace(/,/g, ""))).filter((n) => Number.isFinite(n));
+  if (nums.length !== options.length) return null;
+  return Math.max(...nums) - Math.min(...nums);
+}
+
+// Two options that are the same answer twice make the question unanswerable. Note the bar is
+// *sameness*, not similarity: "O negative" vs "B negative" and "Bollywood" vs "Tollywood" are one
+// edit apart and both perfectly fair, so an edit-distance rule here would eat good questions.
+// The only similarity we do catch is one option swallowing another whole ("Titanic" / "Titanic ").
+function hasNearDuplicateOptions(options) {
+  const norm = options.map((o) => normalizeAnswer(o));
+  for (let i = 0; i < norm.length; i++) {
+    for (let j = i + 1; j < norm.length; j++) {
+      const a = norm[i], b = norm[j];
+      if (!a || !b) return true;
+      if (a === b) return true;
+      const [shortS, longS] = a.length <= b.length ? [a, b] : [b, a];
+      if (shortS.length >= 6 && longS.includes(shortS) && shortS.length / longS.length > 0.9) return true;
+    }
+  }
+  return false;
+}
+
+// The answer sitting inside the question text is a free point. Matched on whole words, because
+// substring matching thinks "Which vitamin does your skin make..." gives away "Vitamin D".
+function answerLeaksIntoText(text, answer) {
+  const a = normalizeAnswer(answer);
+  if (a.length < 4) return false;
+  const words = normalizeAnswer(text).split(" ");
+  const target = a.split(" ");
+  for (let i = 0; i + target.length <= words.length; i++) {
+    let hit = true;
+    for (let k = 0; k < target.length; k++) if (words[i + k] !== target[k]) { hit = false; break; }
+    if (hit) return true;
+  }
+  return false;
+}
+
+/* ============================================================
+   §6.5.2 - grade()
+   ============================================================
+   Returns { ok, reason, score }. `score` (0-100) only means anything when ok is true; the bank
+   sorts by it so the best of a batch lands in the bank and the rest is dropped, rather than
+   taking whatever the API happened to return first.
+*/
+function gradeQuestion(q, { allowNiche = false, strictRegion = true } = {}) {
+  const text = String(q.text || "").trim();
+  const answer = String(q.correctAnswer ?? q.options?.[q.answerIndex] ?? "").trim();
+  const options = (q.options || []).map((o) => String(o).trim());
+  const reject = (reason) => ({ ok: false, reason, score: 0 });
+
+  if (text.length < MIN_QUESTION_LEN) return reject("too-short");
+  if (text.length > MAX_QUESTION_LEN) return reject("too-long");
+  if (!answer) return reject("no-answer");
+  if (q.type === "open" && answer.length < MIN_ANSWER_LEN_OPEN) return reject("answer-too-short-to-type");
+  if (answer.length > MAX_ANSWER_LEN) return reject("answer-unwieldy");
+  if (q.type === "choice" && options.length !== 4) return reject("bad-option-count");
+
+  for (const re of BAD_PHRASING) if (re.test(text)) return reject("meta-phrasing");
+  if (STALE.test(text)) return reject("stale-scoped");
+  if (strictRegion) for (const re of PAROCHIAL) if (re.test(text)) return reject("parochial");
+  if (answerLeaksIntoText(text, answer)) return reject("answer-leak");
+
+  // Pure guess-the-year / guess-the-number questions. A four-year spread of 3 is a coin flip
+  // whatever the event, so that is a reject; wider spreads are merely *dull* ("in which year did
+  // WWII end?" is a fair question), so they take a score penalty and sink below better material.
+  let dullNumbers = 0;
+  if (options.length) {
+    if (hasNearDuplicateOptions(options)) return reject("ambiguous-options");
+    const spread = numericSpread(options);
+    if (isYearSet(options)) {
+      if (spread !== null && spread <= 3) return reject("coin-flip-year");
+      if (spread !== null && spread <= 40) dullNumbers = 20;
+    } else if (options.every((o) => NUMERIC_RE.test(o))) {
+      const biggest = Math.max(...options.map((o) => Math.abs(Number(String(o).replace(/,/g, "")))));
+      if (spread !== null && biggest >= 100 && spread / biggest < 0.08) return reject("coin-flip-number");
+      if (spread !== null && biggest > 0 && spread / biggest < 0.25) dullNumbers = 10;
+    }
+  }
+
+  const tags = (q.tags || []).map((t) => String(t).toLowerCase().replace(/[^a-z0-9_']/g, ""));
+  if (tags.some((t) => TAG_REJECT.has(t))) return reject("blocked-tag");
+  if (!allowNiche && tags.some((t) => DEEP_CUT_TAGS.has(t))) return reject("deep-cut-tag");
+  if (!allowNiche && q.isNiche && q.level !== "hard") return reject("niche-outside-hell");
+
+  /* --- scoring: everything below here has already passed --- */
+  let score = 60;
+  //  Short, clean questions play better out loud on a shared screen.
+  if (text.length <= 90) score += 10;
+  else if (text.length > 140) score -= 10;
+  //  A short answer is a *sayable* answer - and it is what makes a blind Hell round possible.
+  if (answer.length <= 20) score += 8;
+  //  Parentheticals are almost always a disambiguation the writer needed and the player doesn't.
+  if (/\(/.test(text)) score -= 8;
+  //  Dates and roman numerals as answers are the driest thing the APIs ship.
+  if (YEAR_RE.test(answer) || /^[IVXLC]+$/.test(answer)) score -= 12;
+  //  Negations flip half the room's answer for the wrong reason.
+  if (/\bnot\b|\bexcept\b|\bnever\b/i.test(text)) score -= 10;
+  //  Niche is a Hell ingredient, so it is worth *more* when we are explicitly shopping for Hell.
+  if (q.isNiche) score += allowNiche ? 12 : -15;
+  //  Trivia API region hints: a question tagged for one country travels badly.
+  if (Array.isArray(q.regions) && q.regions.length && q.regions.length <= 2) score -= 10;
+  score -= dullNumbers;
+  //  Tag signals (see the tag policy above).
+  if (tags.some((t) => COUNTRY_TAGS.has(t))) score -= 14;
+  if (tags.some((t) => DECADE_TAGS.test(t))) score -= 14;
+  if (tags.some((t) => DRY_TAGS.has(t))) score -= 10;
+  //  A period reference in the text itself does the same job as a decade tag.
+  if (/\b(19[0-8]\d)\b/.test(text) || /\b([2-8]0'?s)\b/.test(text)) score -= 10;
+  //  A quoted two-word proper name is almost always a character nobody outside the fandom knows
+  //  ("Which film contains the character 'Carl Spackler'?").
+  if (/['\u2018\u201c"][A-Z][a-z]+ [A-Z][a-z]+['\u2019\u201d"]/.test(text)) score -= 12;
+  //  Title-Cased Questions Like This One are user submissions, and they are reliably the worst
+  //  written and most typo-ridden entries in the pool.
+  if (isTitleCased(text)) score -= 18;
+  //  "Which of these ..." is paper-quiz phrasing; survivable, but never the best question in a batch.
+  if (/which of these/i.test(text)) score -= 4;
+  //  "Which book contains the character 'X'?" is a template the APIs run on very obscure works.
+  if (/contains the (character|line|quote)/i.test(text)) score -= 14;
+  //  A long quoted title is usually a work only specialists have heard of.
+  const quoted = text.match(/['\u2018\u201c"]([^'\u2019\u201d"]{6,})['\u2019\u201d"]/);
+  if (quoted && quoted[1].length > 28) score -= 8;
+
+  return { ok: true, reason: null, score: Math.max(0, Math.min(100, score)) };
+}
+
+// A Hell `blind` promotion (§5.2) strips the options, so the answer has to survive being typed:
+// long enough to be unambiguous, short enough to bother.
+function isBlindEligible(q) {
+  const a = String(q.correctAnswer ?? q.options?.[q.answerIndex] ?? "").trim();
+  return a.length >= MIN_ANSWER_LEN_OPEN && a.length <= 30 && !/^[\d.,]+$/.test(a);
+}
+
+/* ============================================================
+   §6.5.5 - The curated core
+   ============================================================
+   bank/curated-core.js is a classic script that assigns globalThis.ANSWER_IT_CURATED, so the
+   same file works via <script src> over file:// and via a side-effect import in the Worker.
+*/
+function slug(s) {
+  return normalizeAnswer(s).replace(/\s+/g, "-").slice(0, 48);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Curated row (compact keys, see bank/curated-core.js) -> the §3 Question shape.
+function normalizeCurated(row, buildAccepted, { asOpen = false } = {}) {
+  const correct = String(row.a).trim();
+  const options = shuffle([correct, ...row.w.map((s) => String(s).trim())]);
+  const open = asOpen && row.o === true;
+  return {
+    id: `cur:${row.c}:${slug(row.t)}`,
+    source: "custom",
+    text: String(row.t).trim(),
+    category: row.c,
+    level: row.l,
+    type: open ? "open" : "choice",
+    options: open ? [] : options,
+    answerIndex: open ? -1 : options.indexOf(correct),
+    accepted: buildAccepted(correct),
+    modifiers: [],
+    timeLimit: null,
+    media: null,
+    isNiche: !!row.n,
+    region: row.r || "global",
+    correctAnswer: correct,
+  };
+}
+
+function loadCurated(buildAccepted, { category, level, asOpen = false } = {}) {
+  const rows = globalThis.ANSWER_IT_CURATED || [];
+  return rows
+    .filter((r) => (!category || r.c === category) && (!level || r.l === level))
+    .map((r) => normalizeCurated(r, buildAccepted, { asOpen }));
+}
+
+
+const MAX_OPENTDB_TOPUPS = 10;
+
+// How many questions a single (category,level) bucket needs before it's "not thin" - scales
+// with how few categories are selected (a lone category has to cover a whole level's share of
+// the round by itself; with Mix's 10 categories the LRU rotation spreads that share thin, so
+// each bucket needs far less depth). Without this, "Mix" over-triggers the slow throttled
+// OpenTDB top-up path on every category even though most only need 2-3 questions each.
+function minPerBucket(n, categoryCount){
+  const worstCaseLevelShare = Math.ceil(n * 0.6); // generous upper bound across all profiles/adaptive extremes
+  return Math.max(3, Math.ceil(worstCaseLevelShare / categoryCount) + 2);
+}
+
+async function buildPool(categories, n, onProgress, shouldCancel){
+  const minBucket = minPerBucket(n, categories.length);
+  const pool = {};
+  for (const c of categories) pool[c] = { easy:[], medium:[], hard:[] };
+  const seen = new Set();
+  // Curated core first (§6.5.6). These are the questions the round actually wants; everything
+  // fetched below only tops up what the bank cannot cover. It also means a round is playable
+  // before a single network call returns, and stays playable when both APIs are down.
+  for (const c of categories){
+    for (const q of loadCurated(buildAccepted, { category:c })){
+      if (!pool[c][q.level]) continue;
+      seen.add(q.id);
+      pool[c][q.level].push({ ...q, _score: CURATED_SCORE });
+    }
+  }
+  function ingest(list, source, forcedCategory){
+    for (const raw of list){
+      let cat = forcedCategory;
+      if (!cat && source==="trivia-api") cat = TRIVIA_TO_ANSWERIT[raw.category] || null;
+      if (!cat || !categories.includes(cat)) continue;
+      const q = normalizeQuestion(raw, source, cat);
+      if (!q || !["easy","medium","hard"].includes(q.level)) continue;
+      if (seen.has(q.id)) continue;
+      // §6.5 - the APIs are a volume source, not a quality source. A gate failure never enters
+      // the pool; what survives carries its score so the bucket can sort best-first. Note the
+      // MIN_BANK_SCORE threshold is deliberately NOT applied here: solo has no bank to fall back
+      // on, so a weak-but-valid question is kept and simply sorted to the bottom where it is only
+      // ever reached if the bucket runs dry.
+      const grade = gradeQuestion({ ...q, tags: raw.tags, regions: raw.regions });
+      if (!grade.ok) continue;
+      seen.add(q.id);
+      pool[cat][q.level].push({ ...q, _score: grade.score });
+    }
+  }
+  onProgress?.({ key:"fetchingQuestions" });
+  const triviaCats = [...new Set(categories.flatMap(c => TRIVIA_API_CATEGORIES[c]||[]))];
+  const calls = [];
+  // Two calls PER difficulty (rather than more calls of the same easy/medium/hard mix) -
+  // Trivia API's random sample is skewed hard toward medium/hard (measured live: a 50-question
+  // mixed batch came back ~3 easy / 27 medium / 20 hard), so asking for a mixed batch repeatedly
+  // mostly buys more medium/hard duplicates. Requesting each difficulty explicitly is what
+  // actually clears every category's easy bucket without falling through to the throttled
+  // OpenTDB top-up - measured live: 10/27 thin buckets down to 3/27 for a 9-category Mix.
+  if (triviaCats.length) for (const d of ["easy","medium","hard"]) for (let i=0;i<2;i++) calls.push(fetchTriviaApi({categories:triviaCats, limit:50, difficulties:[d]}).then(r=>ingest(r,"trivia-api")));
+  if (categories.includes("games")) calls.push(fetchTriviaApi({tags:TRIVIA_API_TAGS.games, limit:50}).then(r=>ingest(r,"trivia-api","games")));
+  await Promise.all(calls);
+
+  const need = [];
+  for (const c of categories) for (const L of ["easy","medium","hard"]) if (pool[c][L].length < minBucket) need.push([c,L]);
+  if (need.length){
+    const wait = createThrottle(5500);
+    const capped = need.slice(0, MAX_OPENTDB_TOPUPS);
+    for (let i=0; i<capped.length; i++){
+      if (shouldCancel?.()) throw new RoundCancelled();
+      const [c,L] = capped[i];
+      onProgress?.({ key:"toppingUp", i:i+1, total:capped.length });
+      const ids = OPENTDB_CATEGORIES[c]||[];
+      if (!ids.length) continue;
+      const id = ids[Math.floor(Math.random()*ids.length)];
+      await wait();
+      const r = await fetchOpenTDB({categoryId:id, difficulty:L, amount:50});
+      ingest(r, "opentdb", c);
+    }
+  }
+  // Skip questions served in recent rounds when the bucket can afford it, so a rematch (small
+  // curated buckets especially - see bank/curated-core.js) doesn't just redraw the same handful
+  // of questions. Falls back to including them when too few fresh ones remain, rather than
+  // ever starving a round.
+  const seenIds = new Set(loadSeen());
+  if (seenIds.size){
+    for (const c of categories) for (const L of ["easy","medium","hard"]){
+      const arr = pool[c][L];
+      const fresh = arr.filter(q => !seenIds.has(q.id));
+      if (fresh.length >= Math.min(arr.length, minBucket)) pool[c][L] = fresh;
+    }
+  }
+  // Best-first, so draw() can bias toward quality without ever running a bucket dry (§6.5).
+  for (const c of categories) for (const L of ["easy","medium","hard"]) pool[c][L].sort((a,b)=>(b._score||0)-(a._score||0));
+  return pool;
+}
+class RoundCancelled extends Error {}
+
+function poolTotal(pool, categories, level){
+  return categories.reduce((s,c)=>s+(pool[c]?.[level]?.length||0), 0);
+}
+// Widens outward from `preferred` (same distance easier/harder alternating, easier first) to
+// find the nearest level with any question left across the selected categories - §20 "fill
+// from the next-nearest level, never silently shorten the round."
+function nearestAvailableLevel(pool, categories, preferred){
+  const idx = LEVELS.indexOf(preferred);
+  for (let d=0; d<LEVELS.length; d++){
+    for (const cand of [idx-d, idx+d]){
+      if (cand<0 || cand>=LEVELS.length-1) continue; // -1: "hell" isn't a pool bucket (drawn from hard)
+      const L = LEVELS[cand];
+      if (poolTotal(pool, categories, L) > 0) return L;
+    }
+  }
+  return null;
+}
+
+// §6.5.6 - the hybrid draw. Curated questions win most draws but not all of them: leaning 100%
+// on the curated core would make every round the same 235 questions, which is the *other* half
+// of the "these questions are repetitive" complaint. So we roll for a side first, then sample.
+// Within the API side the bucket is sorted best-first, so we only sample its stronger half.
+const CURATED_SHARE = 0.6; // mirrors DEFAULT_CURATED_SHARE in worker/src/quality.js
+function pickQualityIndex(arr){
+  if (arr.length <= 1) return 0;
+  const curated = [], rest = [];
+  for (let i=0; i<arr.length; i++) (arr[i].source === "custom" ? curated : rest).push(i);
+  const useCurated = curated.length > 0 && (rest.length === 0 || Math.random() < CURATED_SHARE);
+  const from = useCurated ? curated : rest;
+  const window = useCurated ? from.length : Math.max(1, Math.ceil(from.length * 0.5));
+  return from[Math.floor(Math.random()*window)];
+}
+
+function makeRoundSession(pool, settings){
+  const n = settings.n;
+  const categories = settings.categories;
+  const fixedBudget = settings.intensity==="adaptive" ? null : allocateCounts(n, PROFILES[settings.intensity]);
+  const used = { easy:0, medium:0, hard:0, hell:0 };
+  const served = []; // {level, category}
+  const servedIds = [];
+  const rolling = [];
+  const lastCats = [];
+  const notices = [];
+  const styleAllowsBlind = settings.style !== "open"; // blind's whole point is injecting an open Q into a choice/mixed round
+
+  function remaining(){ return n - served.length; }
+  function levelBudget(){
+    if (fixedBudget) return LEVELS.reduce((acc,L)=>{ acc[L]=Math.max(0, fixedBudget[L]-used[L]); return acc; }, {});
+    return allocateCounts(remaining(), adaptiveProfile(rollingAccuracy(rolling)));
+  }
+
+  function pickLevel(pos){
+    if (pos===0) return "easy";
+    const target = levelBudget();
+    const placedLevels = served.map(s=>s.level);
+    let eligible = LEVELS.filter(L => target[L]>0 && levelEligibleAt(L,pos,n,placedLevels) && (L==="hell" ? poolTotal(pool,categories,"hard")>0 : poolTotal(pool,categories,L)>0));
+    if (!eligible.length) eligible = LEVELS.filter(L => target[L]>0 && (L==="hell" ? poolTotal(pool,categories,"hard")>0 : poolTotal(pool,categories,L)>0));
+    if (!eligible.length) eligible = LEVELS.filter(L => (L==="hell" ? poolTotal(pool,categories,"hard")>0 : poolTotal(pool,categories,L)>0));
+    if (!eligible.length) return null; // pool fully exhausted
+    return eligible.reduce((a,b)=> (target[a]||0) >= (target[b]||0) ? a : b);
+  }
+
+  function pickCategory(sourceLevel){
+    const last2 = lastCats.slice(-2);
+    const withStock = categories.filter(c => pool[c][sourceLevel].length>0);
+    if (!withStock.length) return null;
+    const fresh = withStock.filter(c => !(last2.length===2 && last2[0]===c && last2[1]===c));
+    const pickFrom = fresh.length ? fresh : withStock;
+    // least-recently-used: prefer a category not seen in the last few picks - ascending by
+    // lastIndexOf puts the stalest category (or one never used yet, -1) first.
+    pickFrom.sort((a,b) => lastCats.lastIndexOf(a) - lastCats.lastIndexOf(b));
+    return pickFrom[0];
+  }
+
+  function draw(level){
+    const sourceLevel = level==="hell" ? "hard" : level;
+    const category = pickCategory(sourceLevel);
+    if (!category) return null;
+    const arr = pool[category][sourceLevel];
+    let question, modifier=null;
+    if (level==="hell"){
+      const picked = pickHellQuestion(arr, { allowBlind: styleAllowsBlind });
+      if (!picked) return null;
+      question = picked.question; modifier = picked.modifier;
+      arr.splice(arr.indexOf(question), 1);
+      question = applyHellModifier(question, modifier);
+    } else {
+      const i = pickQualityIndex(arr);
+      question = arr[i];
+      arr.splice(i,1);
+    }
+    lastCats.push(category);
+    return { question, category };
+  }
+
+  function applyStyle(q){
+    if (q.type==="open") return q; // already open (blind promotion)
+    if (settings.style==="open") return { ...q, type:"open", options:null };
+    if (settings.style==="mixed" && Math.random() < 0.30) return { ...q, type:"open", options:null };
+    return q;
+  }
+
+  function finalize(q, isDouble){
+    q = applyStyle(q);
+    q.timeLimit = finalizeTimeLimit(q, settings.extended);
+    q.isDouble = !!isDouble;
+    if (q.type==="open") q.options = null;
+    return q;
+  }
+
+  function nextQuestion(){
+    if (served.length >= n) return null;
+    const pos = served.length;
+    let level = pickLevel(pos);
+    if (!level){
+      const nearest = nearestAvailableLevel(pool, categories, "medium");
+      if (!nearest) return null;
+      level = nearest;
+      notices.push({ key:"ranShort" });
+    }
+    let drawn = draw(level);
+    if (!drawn){
+      const nearest = nearestAvailableLevel(pool, categories, level);
+      if (!nearest) return null;
+      notices.push({ key:"toppedUpFrom", level, nearest });
+      level = nearest;
+      drawn = draw(level);
+      if (!drawn) return null;
+    }
+    used[drawn.question.level] = (used[drawn.question.level]||0) + 1;
+    served.push({ level: drawn.question.level, category: drawn.category });
+    servedIds.push(drawn.question.id);
+    return finalize({ ...drawn.question, category: drawn.category });
+  }
+
+  function buildDouble(){
+    const lvl = doubleLevel(served.map(s=>s.level));
+    let drawn = draw(lvl);
+    if (!drawn){
+      const nearest = nearestAvailableLevel(pool, categories, lvl);
+      if (nearest) drawn = draw(nearest);
+    }
+    if (!drawn) return null;
+    servedIds.push(drawn.question.id);
+    return finalize({ ...drawn.question, category: drawn.category }, true);
+  }
+
+  function recordOutcome(correct){
+    rolling.push(correct);
+    if (rolling.length>5) rolling.shift();
+  }
+
+  return { nextQuestion, buildDouble, recordOutcome, notices, get rolling(){ return rolling; }, get servedIds(){ return servedIds; } };
+}
+
+/* ============================================================
+   Live question translation (MyMemory - api.mymemory.translated.net, no key required). Both
+   trivia sources are English-only (§6.1), so a non-English interface machine-translates each
+   question's text/options right before it's shown rather than leaving them untranslated -
+   confirmed live before relying on it: proper CORS headers, no key, reasonable quality.
+   Best-effort throughout: any failure (network, the free daily quota running out) falls back
+   to the original English string rather than blocking the round. Cached (memory + localStorage)
+   since trivia questions reuse the same words constantly.
+   ============================================================ */
+const TRANSLATE_CACHE_KEY = "answerit_translate_cache";
+const translationCache = new Map();
+try {
+  const saved = JSON.parse(localStorage.getItem(TRANSLATE_CACHE_KEY) || "{}");
+  for (const [k, v] of Object.entries(saved)) translationCache.set(k, v);
+} catch {}
+let translationUnavailable = false; // sticky once MyMemory reports its daily quota is spent - stop asking
+
+function saveTranslationCache(){
+  try {
+    const capped = [...translationCache.entries()].slice(-500); // bound what persists across sessions
+    localStorage.setItem(TRANSLATE_CACHE_KEY, JSON.stringify(Object.fromEntries(capped)));
+  } catch {}
+}
+
+async function translateOne(text, targetLang){
+  if (!text || !text.trim()) return text;
+  const key = targetLang + ":" + text;
+  if (translationCache.has(key)) return translationCache.get(key);
+  if (translationUnavailable) return text;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return text;
+    const data = await res.json();
+    if (data.quotaFinished) { translationUnavailable = true; return text; }
+    const translated = data.responseData?.translatedText;
+    if (!translated || typeof translated !== "string") return text;
+    translationCache.set(key, translated);
+    saveTranslationCache();
+    return translated;
+  } catch {
+    return text; // offline / timed out / API hiccup - the English original is still a correct question
+  }
+}
+// Translates one question for display in the current interface language. Scoring is never
+// affected by translation quality: a choice question's correctness is the array position
+// (answerIndex), which translation preserves, not the text itself. An open question keeps
+// matching against the original English `correctAnswer` (the Levenshtein/whole-word-substring
+// checks in matchOpenAnswer are tuned around English word shapes) and instead gets the
+// translated form appended to `accepted[]`, so typing the answer in either language matches -
+// `displayAnswer` is what the reveal screen shows.
+// Names, titles and other proper nouns should stay as-is rather than get machine-translated -
+// confirmed live this is a real failure mode, not a theoretical one: "Dream Theater" (a band)
+// came back as a literal word-for-word Arabic translation instead of staying a band name, and
+// "The Velvet Underground" came back as a whole descriptive sentence pulled from MyMemory's
+// translation memory. Both are exactly the shape this catches: multi-word, every significant
+// word capitalized - band/movie/show/book/game titles and people almost always look like that,
+// and it's precisely what free MT tends to mangle. Single words and ordinary answers (country
+// names, common nouns) fall through untouched and keep translating normally, since that's
+// where translation is actually correct and valuable - confirmed live too: "France" -> "فرنسا"
+// is the right answer, not a bug. Not perfect (no heuristic like this can be), but it removes
+// the worst, most visible failure case.
+const MINOR_WORDS = new Set(["a","an","the","of","and","or","in","on","at","for","to","de","du","des","le","la","les","et"]);
+function looksLikeProperNoun(text){
+  const words = String(text).trim().split(/\s+/);
+  if (words.length < 2) return false;
+  const significant = words.filter(w => !MINOR_WORDS.has(w.toLowerCase().replace(/[^a-z]/gi, "")));
+  if (!significant.length) return false;
+  return significant.every(w => /^[A-Z0-9]/.test(w));
+}
+// Translates `s` unless it looks like a proper noun, in which case it's kept native for free
+// (no network/cache call at all - also saves quota for the strings worth spending it on).
+function translateUnlessProperNoun(s, targetLang){
+  return looksLikeProperNoun(s) ? Promise.resolve(s) : translateOne(s, targetLang);
+}
+
+async function translateQuestion(q){
+  if (lang === "en") return q;
+  if (q.type === "choice"){
+    const [tText, ...tOptions] = await Promise.all([
+      translateOne(q.text, lang), // the connective question text always translates - it's prose, not a name
+      ...q.options.map(o => translateUnlessProperNoun(o, lang)),
+    ]);
+    return { ...q, text: tText, options: tOptions, correctAnswer: tOptions[q.answerIndex] };
+  }
+  const [tText, tAnswer] = await Promise.all([
+    translateOne(q.text, lang),
+    translateUnlessProperNoun(q.correctAnswer, lang),
+  ]);
+  const extra = normalizeAnswer(tAnswer);
+  const accepted = extra && !q.accepted.includes(extra) ? [...q.accepted, extra] : q.accepted;
+  return { ...q, text: tText, displayAnswer: tAnswer, accepted };
+}
+
+/* ============================================================
+   Settings + personal bests (localStorage)
+   ============================================================ */
+const SETTINGS_KEY = "answerit_settings";
+const PB_KEY = "answerit_pb";
+const SEEN_KEY = "answerit_seen";
+const SEEN_CAP = 150; // remembers roughly this many recently-served questions across rounds so
+// a rematch doesn't just redraw the same small curated bucket (§ repetition complaint)
+function loadSeen(){
+  try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || []; } catch { return []; }
+}
+function markSeen(ids){
+  if (!ids.length) return;
+  let arr = loadSeen().filter(id => !ids.includes(id)); // drop old occurrences, they get re-pushed to the end (most recent)
+  arr.push(...ids);
+  if (arr.length > SEEN_CAP) arr = arr.slice(arr.length - SEEN_CAP);
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(arr)); } catch {}
+}
+function loadSettings(){
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch {}
+  return Object.assign({ n:15, categories:[...CATEGORY_KEYS], style:"choice", intensity:"adaptive", streaks:true, hellInsurance:false, extended:false }, s||{});
+}
+function saveSettings(s){ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {} }
+function loadPB(){
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem(PB_KEY)); } catch {}
+  return Object.assign({ overall:0, byCategory:{} }, p||{});
+}
+function savePB(p){ try { localStorage.setItem(PB_KEY, JSON.stringify(p)); } catch {} }
+
+/* ============================================================
+   Setup screen UI
+   ============================================================ */
+let settings = loadSettings();
+
+function renderCatGrid(){
+  $("catGrid").innerHTML = CATEGORIES.map(c => `
+    <button type="button" class="cattile ${settings.categories.includes(c.key)?'on':''}" data-cat="${c.key}">
+      ${icon(c.icon)}<span>${catLabel(c.key)}</span>
+    </button>`).join("");
+}
+on($("catGrid"), "click", e => {
+  const btn = e.target.closest(".cattile"); if (!btn) return;
+  const key = btn.dataset.cat;
+  const i = settings.categories.indexOf(key);
+  if (i>-1){ if (settings.categories.length>1) settings.categories.splice(i,1); }
+  else settings.categories.push(key);
+  renderCatGrid(); refreshSetup();
+});
+
+function wireSeg(id, field, onChange){
+  const seg = $(id);
+  seg.querySelectorAll("button").forEach(b => on(b, "click", () => {
+    settings[field] = b.dataset.v;
+    seg.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b));
+    onChange?.();
+    refreshSetup();
+  }));
+}
+wireSeg("segN", "n");
+wireSeg("segStyle", "style");
+wireSeg("segIntensity", "intensity");
+
+on($("toggleStreaks"), "change", e => { settings.streaks = e.target.checked; refreshSetup(); });
+on($("toggleInsurance"), "change", e => { settings.hellInsurance = e.target.checked; refreshSetup(); });
+on($("toggleExtended"), "change", e => { settings.extended = e.target.checked; refreshSetup(); });
+
+const LEVEL_COLOR_VAR = { easy:"--lvl-easy", medium:"--lvl-medium", hard:"--lvl-hard", hell:"--lvl-hell" };
+function lvlDot(level){
+  return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(${LEVEL_COLOR_VAR[level]});vertical-align:middle;margin-right:4px"></span>`;
+}
+function refreshSetup(){
+  $("segN").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v==String(settings.n)));
+  $("segStyle").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.style));
+  $("segIntensity").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.intensity));
+  $("toggleStreaks").checked = settings.streaks;
+  $("toggleInsurance").checked = settings.hellInsurance;
+  $("toggleInsurance").disabled = !settings.streaks;
+  $("toggleExtended").checked = settings.extended;
+
+  const profile = settings.intensity==="adaptive" ? PROFILES.standard : PROFILES[settings.intensity];
+  const counts = allocateCounts(settings.n, profile);
+  $("mixBar").innerHTML = LEVELS.map(L => `<div style="width:${counts[L]/settings.n*100}%;background:var(${LEVEL_COLOR_VAR[L]})"></div>`).join("");
+  $("mixLegend").innerHTML = LEVELS.map(L => `<span><span class="dot" style="background:var(${LEVEL_COLOR_VAR[L]})"></span>${esc(levelName(L))} ${counts[L]}</span>`).join("");
+  $("intensityNote").textContent = settings.intensity==="adaptive" ? t("intensityNoteAdaptive") : t("intensityNoteFixed");
+
+  $("startRoundBtn").textContent = t("startRoundBtn", settings.n);
+  const warn = $("setupWarning");
+  if (settings.categories.length===0){
+    warn.textContent = t("pickCategoryWarning"); warn.classList.remove("hide");
+    $("startRoundBtn").disabled = true;
+  } else {
+    warn.classList.add("hide"); $("startRoundBtn").disabled = false;
+  }
+  saveSettings(settings);
+}
+
+on($("menuPlaySolo"), "click", () => { renderCatGrid(); refreshSetup(); show("screen-setup"); });
+on($("setupBack"), "click", () => show("screen-menu"));
+
+/* ============================================================
+   Round flow
+   ============================================================ */
+let R = null; // active round runtime state
+
+function newRoundState(){
+  return {
+    session:null, pool:null, current:null, qIndexShown:0, isDoubleNow:false,
+    score:0, streak:0, bestStreak:0, correctCount:0, answeredCount:0,
+    avgMsSum:0, byCategory:{}, log:[], startAt:0, questionStartAt:0, locked:false,
+    timerHandle:null, servedLevelsForAwards:[],
+  };
+}
+
+function progressText(p){ return p.key==="toppingUp" ? t("toppingUp", p.i, p.total) : t(p.key); }
+function noticeText(n){ return n.key==="toppedUpFrom" ? t("toppedUpFrom", levelName(n.level), levelName(n.nearest)) : t(n.key); }
+
+let loadingCancelFlag = false;
+on($("loadingCancel"), "click", () => { loadingCancelFlag = true; show("screen-setup"); });
+
+on($("startRoundBtn"), "click", async () => {
+  show("screen-loading");
+  loadingCancelFlag = false;
+  $("loadingSub").textContent = t("fetchingQuestions");
+  $("loadingCancel").classList.remove("hide");
+  try {
+    const pool = await buildPool(settings.categories, settings.n, p => $("loadingSub").textContent = progressText(p), () => loadingCancelFlag);
+    const total = LEVELS.filter(L=>L!=="hell").reduce((s,L)=>s+poolTotal(pool, settings.categories, L), 0);
+    if (total < Math.min(6, settings.n)){
+      $("errorMsg").textContent = t("errorTooLittle");
+      show("screen-error"); return;
+    }
+    R = newRoundState();
+    R.pool = pool;
+    R.session = makeRoundSession(pool, settings);
+    R.startAt = Date.now();
+    advanceRound();
+  } catch (err){
+    if (err instanceof RoundCancelled) return; // loadingCancel already navigated back to setup
+    $("errorMsg").textContent = t("errorUnreachable");
+    show("screen-error");
+  }
+});
+on($("errorRetry"), "click", () => $("startRoundBtn").click());
+on($("errorMenu"), "click", () => show("screen-menu"));
+
+async function advanceRound(){
+  if (!R.isDoubleNow && R.qIndexShown >= settings.n){
+    R.isDoubleNow = true;
+    let dq = R.session.buildDouble();
+    if (!dq){ toast(t("ranOutDouble")); finishRound(); return; }
+    dq = await translateQuestion(dq);
+    showInterstitial("dbl", dq);
+    return;
+  }
+  if (R.isDoubleNow){ finishRound(); return; }
+
+  let q = R.session.nextQuestion();
+  if (!q){
+    // Pool truly exhausted despite the upfront adequacy check (§20: never invent questions -
+    // ending a few short is the honest fallback, but the player is told, not left guessing).
+    toast(t("ranOutFresh", R.qIndexShown));
+    finishRound();
+    return;
+  }
+  R.session.notices.forEach(n => toast(noticeText(n)));
+  R.session.notices.length = 0;
+  R.qIndexShown++;
+  q = await translateQuestion(q);
+  if (q.level==="hell"){ showInterstitial("hell", q); return; }
+  showQuestion(q);
+}
+
+function showInterstitial(kind, q){
+  if (kind==="hell"){
+    const mod = q.modifiers?.[0];
+    $("hellSub").textContent = mod==="rush" ? t("hellRush", q.timeLimit)
+      : mod==="blind" ? t("hellBlind")
+      : t("hellBasePoints");
+    $("hellCard").classList.remove("hide");
+    setTimeout(() => { $("hellCard").classList.add("hide"); showQuestion(q); }, reduceMotion ? 400 : 1600);
+  } else {
+    $("dblSub").textContent = t("doubleSub", R.score.toLocaleString());
+    $("dblCard").classList.remove("hide");
+    setTimeout(() => { $("dblCard").classList.add("hide"); showQuestion(q); }, reduceMotion ? 400 : 1800);
+  }
+}
+
+function showQuestion(q){
+  R.current = q; R.locked = false;
+  show("screen-question");
+  const chip = $("qLevelChip");
+  chip.textContent = levelName(q.level) + (q.isDouble ? " ×2" : "");
+  chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
+  $("qCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("qProgress").textContent = q.isDouble ? t("theDouble") : t("questionOf", R.qIndexShown, settings.n);
+  $("qText").textContent = q.text;
+
+  const pill = $("streakPill");
+  if (settings.streaks && R.streak>0){
+    pill.classList.remove("hide");
+    $("streakVal").textContent = R.streak;
+    $("streakMult").textContent = "×" + streakMultiplier(R.streak).toFixed(1);
+  } else pill.classList.add("hide");
+
+  const optGrid = $("qOptions"), openRow = $("qOpenRow"), lockedNote = $("qLockedNote");
+  lockedNote.classList.add("hide");
+  if (q.type==="choice"){
+    optGrid.classList.remove("hide"); openRow.classList.add("hide");
+    const shapes = ["tri","dia","cir","sq"]; const colors = ["--shape-a","--shape-b","--shape-c","--shape-d"];
+    optGrid.innerHTML = q.options.map((opt,i) => `
+      <button type="button" class="opt" data-i="${i}" style="--opt-color:var(${colors[i%4]})">
+        <span class="opt-shape ${shapes[i%4]}"></span>
+        <span class="opt-key">${i+1}</span>
+        <span class="opt-text">${esc(opt)}</span>
+        <span class="opt-mark hide"></span>
+      </button>`).join("");
+    optGrid.querySelectorAll(".opt").forEach(b => on(b, "click", () => submitAnswer(Number(b.dataset.i))));
+  } else {
+    optGrid.classList.add("hide"); openRow.classList.remove("hide");
+    const input = $("qOpenInput");
+    input.value = ""; input.disabled = false; $("qOpenSubmit").disabled = false; input.focus();
+  }
+
+  R.questionStartAt = performance.now();
+  startTimer(q.timeLimit, q.level);
+}
+
+function startTimer(seconds, level){
+  const fill = $("timerFill");
+  fill.style.transition = "none"; fill.style.transform = "scaleX(1)";
+  fill.style.background = `var(${LEVEL_COLOR_VAR[level]})`;
+  void fill.offsetWidth;
+  if (!reduceMotion){
+    requestAnimationFrame(() => { fill.style.transition = `transform ${seconds}s linear`; fill.style.transform = "scaleX(0)"; });
+  }
+  const endAt = performance.now() + seconds*1000;
+  $("timerLabel").textContent = seconds;
+  let announced10=false, announced5=false;
+  clearInterval(R.timerHandle);
+  R.timerHandle = setInterval(() => {
+    if (R.locked){ clearInterval(R.timerHandle); return; }
+    const left = Math.max(0, endAt - performance.now());
+    const s = Math.ceil(left/1000);
+    $("timerLabel").textContent = s;
+    if (reduceMotion) fill.style.transform = `scaleX(${left/(seconds*1000)})`;
+    if (s<=10 && !announced10){ announced10=true; $("timerAnnounce").textContent = t("secondsLeft", 10); }
+    if (s<=5 && !announced5){ announced5=true; $("timerAnnounce").textContent = t("secondsLeft", 5); }
+    if (left<=0){ clearInterval(R.timerHandle); $("timerAnnounce").textContent = t("timesUp"); onTimeout(); }
+  }, 100);
+}
+
+function lockInputs(){
+  $("qOptions").querySelectorAll(".opt").forEach(b => b.disabled = true);
+  $("qOpenInput").disabled = true;
+  $("qOpenSubmit").disabled = true;
+}
+function onTimeout(){
+  if (R.locked) return;
+  R.locked = true;
+  lockInputs();
+  finishAnswer({ verdict:"wrong", ms: R.current.timeLimit*1000, submittedText:"" });
+}
+on($("qOpenSubmit"), "click", () => submitOpen());
+on($("qOpenInput"), "keydown", e => { if (e.key==="Enter") submitOpen(); });
+function submitOpen(){
+  const val = $("qOpenInput").value.trim();
+  if (!val){ return; }
+  submitAnswer(val);
+}
+function submitAnswer(value){
+  if (R.locked) return;
+  R.locked = true;
+  clearInterval(R.timerHandle);
+  lockInputs();
+  const q = R.current;
+  const ms = clamp(performance.now() - R.questionStartAt, 0, q.timeLimit*1000);
+  let verdict, submittedText;
+  if (q.type==="choice"){
+    verdict = value===q.answerIndex ? "correct" : "wrong";
+    submittedText = q.options[value];
+    const optEls = $("qOptions").querySelectorAll(".opt");
+    optEls.forEach((el,i) => {
+      if (i===q.answerIndex) el.classList.add("correct");
+      else if (i===value) el.classList.add("wrong");
+      else el.classList.add("dim");
+    });
+  } else {
+    verdict = matchOpenAnswer(value, q.correctAnswer, q.accepted);
+    submittedText = value;
+    $("qOpenInput").blur();
+  }
+  finishAnswer({ verdict, ms, submittedText });
+}
+
+function finishAnswer({ verdict, ms, submittedText }){
+  const q = R.current;
+  const disputeAutoResolved = verdict==="dispute"; // solo has no host - auto-resolve generous (§11, §20)
+  const correct = verdict!=="wrong";
+
+  const result = scoreAnswer({
+    level:q.level, type:q.type, isDouble:!!q.isDouble, responseTimeMs: ms,
+    streakBefore: settings.streaks ? R.streak : 0, correct,
+    hellInsurance: settings.hellInsurance,
+  });
+  R.score += result.points;
+  R.streak = settings.streaks ? result.streakAfter : 0;
+  R.bestStreak = Math.max(R.bestStreak, R.streak);
+  R.answeredCount++;
+  R.avgMsSum += ms;
+  if (correct) R.correctCount++;
+  R.session.recordOutcome(correct);
+  R.servedLevelsForAwards.push(q.level);
+
+  const bc = (R.byCategory[q.category] ||= { c:0, n:0 });
+  bc.n++; if (correct) bc.c++;
+
+  R.log.push({ text:q.text, category:q.category, level:q.level, isDouble:!!q.isDouble, submittedText, correctAnswer:q.displayAnswer||q.correctAnswer, correct, points:result.points, ms });
+
+  renderReveal(q, { verdict, correct, ms, result, disputeAutoResolved });
+}
+
+function renderReveal(q, { verdict, correct, ms, result, disputeAutoResolved }){
+  const chip = $("rLevelChip");
+  chip.textContent = levelName(q.level) + (q.isDouble ? " ×2" : "");
+  chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
+  $("rCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("rAnswer").textContent = q.displayAnswer || q.correctAnswer;
+  $("rDisputeNote").classList.toggle("hide", !disputeAutoResolved);
+
+  $("rMark").innerHTML = icon(correct ? "check" : "x");
+  $("rMark").className = "mark " + (correct ? "ok" : "no");
+  $("rPoints").textContent = (correct ? "+" : "") + result.points.toLocaleString();
+  $("rTime").textContent = fmtMs(ms);
+  $("rStreak").textContent = R.streak;
+  $("rMultWrap").classList.toggle("hide", !correct || result.multiplier<=1);
+  $("rMult").textContent = result.multiplier.toFixed(1);
+  $("rScore").textContent = R.score.toLocaleString();
+
+  const pill = $("streakPill");
+  if (correct && settings.streaks && R.streak>0){ pill.classList.remove("hide"); pill.classList.add("bump"); setTimeout(()=>pill.classList.remove("bump"), 420); }
+
+  show("screen-reveal");
+}
+function nextFromReveal(){
+  if (R.isDoubleNow) { finishRound(); return; }
+  advanceRound();
+}
+on($("revealNext"), "click", nextFromReveal);
+
+/* ============================================================
+   Podium
+   ============================================================ */
+function finishRound(){
+  markSeen(R.session.servedIds);
+  const pb = loadPB();
+  let isNewOverall = R.score > (pb.overall||0);
+  if (isNewOverall) pb.overall = R.score;
+  let catPB = false;
+  if (settings.categories.length===1){
+    const key = settings.categories[0];
+    const prev = pb.byCategory[key]||0;
+    if (R.score > prev){ pb.byCategory[key] = R.score; catPB = true; }
+  }
+  savePB(pb);
+
+  $("finalScore").textContent = R.score.toLocaleString();
+  $("pbBadge").classList.toggle("hide", !(isNewOverall || catPB));
+  $("pbBadge").innerHTML = icon("partyPopper") + " " + esc(catPB ? t("newPersonalBestInCategory", catLabel(settings.categories[0])) : t("newPersonalBest"));
+
+  $("catBreakdown").innerHTML = Object.entries(R.byCategory).map(([key, s]) => `
+    <div class="catrow">
+      <div class="name">${icon(CAT_BY_KEY[key].icon)} ${catLabel(key)}</div>
+      <div class="bar"><div style="width:${s.n?Math.round(s.c/s.n*100):0}%"></div></div>
+      <div class="frac">${s.c}/${s.n}</div>
+    </div>`).join("") || `<p style="color:var(--muted);font-size:13px">${esc(t("noQuestionsAnswered"))}</p>`;
+
+  $("awardsList").innerHTML = computeAwards().map(a => `<div>${a}</div>`).join("") || `<p style="color:var(--muted);font-size:13px">${esc(t("playFullRoundForAwards"))}</p>`;
+
+  $("reviewList").innerHTML = R.log.map(l => `
+    <div class="reviewrow" title="${esc(l.text)}">
+      <span class="rmark" style="color:${l.correct?'var(--lvl-easy)':'var(--lvl-hell)'}">${icon(l.correct?"circleCheck":"circleX")}</span>
+      <span class="rtext">${esc(l.text)}${l.correct ? "" : esc(t("youAnswerFmt", l.submittedText || t("noAnswer"), l.correctAnswer))}</span>
+      <span style="color:var(--muted);flex:none">${l.correct?"+":""}${l.points}</span>
+    </div>`).join("");
+
+  show("screen-podium");
+  confetti.burst();
+}
+
+function computeAwards(){
+  const awards = [];
+  if (R.avgMsSum>0 && R.answeredCount>0) {
+    const avg = R.avgMsSum/R.answeredCount;
+    if (avg < 4000) awards.push(icon("timer") + " " + esc(t("fastestFinger", (avg/1000).toFixed(1))));
+  }
+  if (R.bestStreak>=5) awards.push(icon("snowflake") + " " + esc(t("iceCold", R.bestStreak)));
+  if (R.log.some(l => l.level==="hell" && l.correct)) awards.push(icon("skull") + " " + esc(t("againstAllOdds")));
+  for (const [key,s] of Object.entries(R.byCategory)) if (s.n>=3 && s.c===s.n) awards.push(icon("target") + " " + esc(t("specialist", catLabel(key))));
+  return awards;
+}
+
+on($("podiumRematch"), "click", () => $("startRoundBtn").click());
+on($("podiumSettings"), "click", () => { renderCatGrid(); refreshSetup(); show("screen-setup"); });
+on($("podiumMenu"), "click", () => show("screen-menu"));
+
+/* ============================================================
+   Modals
+   ============================================================ */
+function openModal(html){
+  $("modalBody").innerHTML = html;
+  $("modalScrim").classList.remove("hide");
+}
+function closeModal(){ $("modalScrim").classList.add("hide"); }
+on($("modalScrim"), "click", e => { if (e.target===$("modalScrim")) closeModal(); });
+
+on($("menuHowTo"), "click", () => openModal(`
+  <h2>${esc(t("howToPlayTitle"))}</h2>
+  <p style="margin-bottom:10px">${esc(t("howToPlayIntro"))}</p>
+  <table style="width:100%;border-collapse:collapse;font-size:13.5px;margin-bottom:14px">
+    <tr style="color:var(--muted)"><th style="text-align:start">${esc(t("tableHeaderLevel"))}</th><th style="text-align:start">${esc(t("tableHeaderPoints"))}</th><th style="text-align:start">${esc(t("tableHeaderClock"))}</th></tr>
+    <tr><td>${lvlDot("easy")} ${esc(levelName("easy"))}</td><td>600</td><td>15s</td></tr>
+    <tr><td>${lvlDot("medium")} ${esc(levelName("medium"))}</td><td>1,000</td><td>20s</td></tr>
+    <tr><td>${lvlDot("hard")} ${esc(levelName("hard"))}</td><td>1,500</td><td>25s</td></tr>
+    <tr><td>${lvlDot("hell")} ${esc(levelName("hell"))}</td><td>2,500</td><td>35s</td></tr>
+  </table>
+  <p style="margin-bottom:8px"><b>${esc(t("speedMattersBold"))}</b> ${esc(t("speedMattersText"))}</p>
+  <p style="margin-bottom:8px"><b>${esc(t("streaksBold"))}</b>${esc(t("streaksText"))}</p>
+  <p style="margin-bottom:8px"><b>${esc(t("theDoubleBold"))}</b>${esc(t("theDoubleText"))}</p>
+  <p>${esc(t("wrongAnswersText"))}</p>
+  <div style="text-align:end;margin-top:14px"><button class="btn btn-primary" onclick="document.getElementById('modalScrim').classList.add('hide')">${esc(t("gotIt"))}</button></div>
+`));
+on($("menuCredits"), "click", () => openModal(`
+  <h2>${esc(t("creditsTitle"))}</h2>
+  <p style="margin-bottom:10px">${esc(t("creditsQuestionsFrom"))} <a href="https://the-trivia-api.com/" target="_blank" rel="noopener">The Trivia API</a> (CC BY-NC 4.0) ${esc(t("creditsAnd"))} <a href="https://opentdb.com/" target="_blank" rel="noopener">Open Trivia Database</a> (CC BY-SA 4.0).</p>
+  <p style="color:var(--muted);font-size:13px">${esc(t("creditsStack"))}</p>
+  <div style="text-align:end;margin-top:14px"><button class="btn btn-primary" onclick="document.getElementById('modalScrim').classList.add('hide')">${esc(t("close"))}</button></div>
+`));
+
+/* ============================================================
+   Keyboard controls (§19)
+   ============================================================ */
+document.addEventListener("keydown", (e) => {
+  if (!$("modalScrim").classList.contains("hide") && e.key==="Escape"){ closeModal(); return; }
+  if ($("screen-question").classList.contains("active") && !R?.locked){
+    if (["1","2","3","4"].includes(e.key) && $("qOptions").classList.contains("hide")===false){
+      const i = Number(e.key)-1;
+      const btn = $("qOptions").querySelector(`[data-i="${i}"]`);
+      if (btn && !btn.disabled) submitAnswer(i);
+    }
+  }
+  if ($("screen-reveal").classList.contains("active") && (e.key==="Enter" || e.key===" " || e.key==="Escape")){
+    e.preventDefault(); nextFromReveal();
+  }
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+mountIcons();
+applyLanguage(lang); // also runs renderCatGrid() + refreshSetup(), which boot needs anyway
+show("screen-menu");
+</script>
+</body>
+</html>
