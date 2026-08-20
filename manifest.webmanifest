@@ -1,0 +1,17 @@
+{
+  "name": "Answer It - Trivia, Fast",
+  "short_name": "Answer It",
+  "description": "A fast, loud trivia game. Four levels, streak multipliers, and a Double worth 2x on the last question.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#15151b",
+  "theme_color": "#15151b",
+  "orientation": "portrait-primary",
+  "categories": ["games", "entertainment", "trivia"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
