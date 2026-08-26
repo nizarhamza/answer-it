@@ -1,5 +1,6 @@
 import "./bank/curated-core.js";
 import "./bank/curated-extra.js";
+import "./bank/curated-islamic.js";
 import { buildAccepted, normalizeAnswer } from "./worker/src/game-core.js";
 import { gradeQuestion, dedupeKey, normalizeCurated } from "./worker/src/quality.js";
 

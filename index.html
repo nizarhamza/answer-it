@@ -487,6 +487,20 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
       </div>
 
       <div class="card">
+        <div class="section-title" data-i18n="regionTitle"></div>
+        <div class="seg" id="segRegion" style="flex-wrap:wrap">
+          <button data-v="any" data-i18n="regionAny"></button>
+          <button data-v="africa" data-i18n="regionAfrica"></button>
+          <button data-v="asia" data-i18n="regionAsia"></button>
+          <button data-v="latam" data-i18n="regionLatam"></button>
+          <button data-v="mena" data-i18n="regionMena"></button>
+          <button data-v="europe" data-i18n="regionEurope"></button>
+          <button data-v="na" data-i18n="regionNa"></button>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="regionNote"></p>
+      </div>
+
+      <div class="card">
         <div class="togglerow">
           <div><div class="lbl" data-i18n="streaksLabel"></div><div class="sub" data-i18n="streaksSub"></div></div>
           <label class="switch"><input type="checkbox" id="toggleStreaks" checked><span class="track"><span class="knob"></span></span></label>
@@ -707,6 +721,19 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
           <div class="mixbar" id="lobbyMixBar" style="margin-top:10px"></div>
         </div>
         <div class="card">
+          <div class="section-title" data-i18n="regionTitle"></div>
+          <div class="seg" id="lobbySegRegion" style="flex-wrap:wrap">
+            <button data-v="any" data-i18n="regionAny"></button>
+            <button data-v="africa" data-i18n="regionAfrica"></button>
+            <button data-v="asia" data-i18n="regionAsia"></button>
+            <button data-v="latam" data-i18n="regionLatam"></button>
+            <button data-v="mena" data-i18n="regionMena"></button>
+            <button data-v="europe" data-i18n="regionEurope"></button>
+            <button data-v="na" data-i18n="regionNa"></button>
+          </div>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="regionNote"></p>
+        </div>
+        <div class="card">
           <div class="togglerow">
             <div><div class="lbl" data-i18n="streaksLabel"></div></div>
             <label class="switch"><input type="checkbox" id="lobbyToggleStreaks" checked><span class="track"><span class="knob"></span></span></label>
@@ -873,6 +900,8 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
 <script src="bank/curated-core.js"></script>
 <!-- Second batch, same global. Split only so the diff stays reviewable - see its header. -->
 <script src="bank/curated-extra.js"></script>
+<!-- Islamic Knowledge category - its own file for the same "keep the diff reviewable" reason. -->
+<script src="bank/curated-islamic.js"></script>
 
 <script>
 "use strict";
@@ -933,6 +962,7 @@ const ICONS = {
   pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
   arrowUp: '<path d="m5 12 7-7 7 7" /><path d="M12 19V5" />',
   arrowDown: '<path d="M12 5v14" /><path d="m19 12-7 7-7-7" />',
+  moonStar: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /><path d="M19 3v4" /><path d="M21 5h-4" />',
 };
 function icon(name, cls){
   return `<svg class="icon${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||""}</svg>`;
@@ -986,12 +1016,15 @@ en: { dir:"ltr", langName:"English",
   roomClosed:"This room has closed.",
   soloRoundTitle:"Solo round", back:"Back", categoriesTitle:"Categories",
   catGeneral:"General", catScience:"Science", catHistory:"History", catGeography:"Geography",
-  catMusic:"Music", catScreen:"Film & TV", catGames:"Games", catSport:"Sport", catArts:"Arts", catCulture:"Culture",
+  catMusic:"Music", catScreen:"Film & TV", catGames:"Games", catSport:"Sport", catArts:"Arts", catCulture:"Culture", catIslamic:"Islamic Knowledge",
   questionsTitle:"Questions", answerStyleTitle:"Answer style",
   styleChoice:"With options", styleOpen:"Without options", styleMixed:"Mixed",
   intensityTitle:"Intensity", intensityChill:"Chill", intensityStandard:"Standard", intensityBrutal:"Brutal", intensityAdaptive:"Adaptive",
   intensityNoteAdaptive:"Starts at Standard, then shifts toward or away from Hell as you play.",
   intensityNoteFixed:"Fixed for the whole round.",
+  regionTitle:"Region", regionAny:"Any", regionAfrica:"Africa", regionAsia:"Asia",
+  regionLatam:"Latin America", regionMena:"MENA", regionEurope:"Europe", regionNa:"North America",
+  regionNote:"Picks only that region's curated questions - a themed round, not a wider mix. A narrow region with a narrow category can come up short; widen either if a round won't build.",
   levelEasy:"Easy", levelMedium:"Medium", levelHard:"Hard", levelHell:"Hell",
   streaksLabel:"Streaks", streaksSub:"Consecutive correct answers build a score multiplier",
   hellInsuranceLabel:"Hell Insurance", hellInsuranceSub:"A streak of 3+ survives a missed Hell question at 1, not 0",
@@ -1076,12 +1109,15 @@ fr: { dir:"ltr", langName:"Français",
   roomClosed:"Cette salle est fermée.",
   soloRoundTitle:"Partie solo", back:"Retour", categoriesTitle:"Catégories",
   catGeneral:"Général", catScience:"Sciences", catHistory:"Histoire", catGeography:"Géographie",
-  catMusic:"Musique", catScreen:"Cinéma & TV", catGames:"Jeux", catSport:"Sport", catArts:"Arts", catCulture:"Culture",
+  catMusic:"Musique", catScreen:"Cinéma & TV", catGames:"Jeux", catSport:"Sport", catArts:"Arts", catCulture:"Culture", catIslamic:"Connaissances islamiques",
   questionsTitle:"Questions", answerStyleTitle:"Style de réponse",
   styleChoice:"Avec options", styleOpen:"Sans options", styleMixed:"Mixte",
   intensityTitle:"Intensité", intensityChill:"Détente", intensityStandard:"Standard", intensityBrutal:"Brutal", intensityAdaptive:"Adaptatif",
   intensityNoteAdaptive:"Commence au niveau Standard, puis évolue vers l'Enfer ou s'en éloigne selon vos réponses.",
   intensityNoteFixed:"Fixe pour toute la partie.",
+  regionTitle:"Région", regionAny:"Toutes", regionAfrica:"Afrique", regionAsia:"Asie",
+  regionLatam:"Amérique latine", regionMena:"MENA", regionEurope:"Europe", regionNa:"Amérique du Nord",
+  regionNote:"Ne sert que les questions du bassin sélectionné pour cette région - une partie thématique, pas un mélange élargi. Une région restreinte combinée à une catégorie restreinte peut manquer de questions ; élargissez l'une ou l'autre si la partie ne se lance pas.",
   levelEasy:"Facile", levelMedium:"Moyen", levelHard:"Difficile", levelHell:"Enfer",
   streaksLabel:"Séries", streaksSub:"Des bonnes réponses consécutives augmentent un multiplicateur de score",
   hellInsuranceLabel:"Assurance Enfer", hellInsuranceSub:"Une série de 3+ survit à une question Enfer manquée en tombant à 1 au lieu de 0",
@@ -1166,12 +1202,15 @@ ar: { dir:"rtl", langName:"العربية",
   roomClosed:"أُغلقت هذه الغرفة.",
   soloRoundTitle:"جولة فردية", back:"رجوع", categoriesTitle:"الفئات",
   catGeneral:"معلومات عامة", catScience:"العلوم", catHistory:"التاريخ", catGeography:"الجغرافيا",
-  catMusic:"الموسيقى", catScreen:"السينما والتلفاز", catGames:"الألعاب", catSport:"الرياضة", catArts:"الفنون", catCulture:"المجتمع والثقافة",
+  catMusic:"الموسيقى", catScreen:"السينما والتلفاز", catGames:"الألعاب", catSport:"الرياضة", catArts:"الفنون", catCulture:"المجتمع والثقافة", catIslamic:"المعرفة الإسلامية",
   questionsTitle:"عدد الأسئلة", answerStyleTitle:"نمط الإجابة",
   styleChoice:"مع خيارات", styleOpen:"بدون خيارات", styleMixed:"مختلط",
   intensityTitle:"شدة الصعوبة", intensityChill:"هادئ", intensityStandard:"عادي", intensityBrutal:"قاسِّ", intensityAdaptive:"تكيفي",
   intensityNoteAdaptive:"يبدأ عند المستوى العادي، ثم يتغيّر نحو الجحيم أو بعيدًا عنه حسب أدائك.",
   intensityNoteFixed:"ثابت طوال الجولة.",
+  regionTitle:"المنطقة", regionAny:"أي منطقة", regionAfrica:"أفريقيا", regionAsia:"آسيا",
+  regionLatam:"أمريكا اللاتينية", regionMena:"الشرق الأوسط وشمال أفريقيا", regionEurope:"أوروبا", regionNa:"أمريكا الشمالية",
+  regionNote:"يقتصر على أسئلة تلك المنطقة فقط من البنك المُنتقى - جولة ذات طابع خاص، لا مزيج أوسع. قد لا تكفي الأسئلة مع منطقة وفئة ضيقتين معًا؛ وسّع إحداهما إذا تعذّر بناء الجولة.",
   levelEasy:"سهل", levelMedium:"متوسط", levelHard:"صعب", levelHell:"جحيم",
   streaksLabel:"التتابع", streaksSub:"الإجابات الصحيحة المتتالية تزيد مضاعف النقاط",
   hellInsuranceLabel:"تأمين الجحيم", hellInsuranceSub:"عند تتابع 3 إجابات أو أكثر، الفشل في سؤال جحيم يُبقي التتابع عند 1 بدلاً من الصفر",
@@ -1670,10 +1709,11 @@ const CATEGORIES = [
   { key:"sport", icon:"trophy" },
   { key:"arts", icon:"bookOpen" },
   { key:"culture", icon:"drama" },
+  { key:"islamic", icon:"moonStar" },
 ];
 const CATEGORY_KEYS = CATEGORIES.map(c=>c.key);
 // Label lookup keys follow "cat"/"level" + Capitalized(key) for every category and level -
-// verified to hold for all 10 categories and all 4 levels, so one small helper covers both
+// verified to hold for all 11 categories and all 4 levels, so one small helper covers both
 // rather than a second translation table duplicating CATEGORIES/LEVELS.
 function catLabel(key){ return t("cat"+key[0].toUpperCase()+key.slice(1)); }
 function levelName(level){ return t("level"+level[0].toUpperCase()+level.slice(1)); }
@@ -1682,6 +1722,7 @@ const TRIVIA_API_CATEGORIES = {
   general:["general_knowledge"], science:["science"], history:["history","politics"],
   geography:["geography"], music:["music"], screen:["film_and_tv"], games:[],
   sport:["sport_and_leisure"], arts:["arts_and_literature"], culture:["society_and_culture","food_and_drink"],
+  islamic:[], // no dedicated API category - curated-only, same treatment as "games" gets for its API-less slice
 };
 const TRIVIA_API_TAGS = { games:["video_games","board_games"] };
 const TRIVIA_TO_ANSWERIT = {};
@@ -1689,6 +1730,8 @@ for (const [ourKey, apiKeys] of Object.entries(TRIVIA_API_CATEGORIES)) for (cons
 const OPENTDB_CATEGORIES = {
   general:[9], science:[17,18,19,30,27], history:[23,24], geography:[22], music:[12,13],
   screen:[11,14,32], games:[15,16,31,29], sport:[21], arts:[10,25], culture:[20,26,28],
+  // no islamic entry - OpenTDB has no matching category either; buildPool's `ids.length` guard
+  // already skips a category with no mapping instead of erroring.
 };
 
 const MAX_QUESTION_LEN = 180, MIN_ANSWER_LEN = 2;
@@ -2081,10 +2124,10 @@ function normalizeCurated(row, buildAccepted, { asOpen = false } = {}) {
   };
 }
 
-function loadCurated(buildAccepted, { category, level, asOpen = false } = {}) {
+function loadCurated(buildAccepted, { category, level, region, asOpen = false } = {}) {
   const rows = globalThis.ANSWER_IT_CURATED || [];
   return rows
-    .filter((r) => (!category || r.c === category) && (!level || r.l === level))
+    .filter((r) => (!category || r.c === category) && (!level || r.l === level) && (!region || r.r === region))
     .map((r) => normalizeCurated(r, buildAccepted, { asOpen }));
 }
 
@@ -2101,7 +2144,8 @@ function minPerBucket(n, categoryCount){
   return Math.max(3, Math.ceil(worstCaseLevelShare / categoryCount) + 2);
 }
 
-async function buildPool(categories, n, onProgress, shouldCancel){
+async function buildPool(categories, n, onProgress, shouldCancel, region){
+  const regionFilter = region && region!=="any" ? region : null;
   const minBucket = minPerBucket(n, categories.length);
   const pool = {};
   for (const c of categories) pool[c] = { easy:[], medium:[], hard:[] };
@@ -2110,7 +2154,7 @@ async function buildPool(categories, n, onProgress, shouldCancel){
   // fetched below only tops up what the bank cannot cover. It also means a round is playable
   // before a single network call returns, and stays playable when both APIs are down.
   for (const c of categories){
-    for (const q of loadCurated(buildAccepted, { category:c })){
+    for (const q of loadCurated(buildAccepted, { category:c, region:regionFilter })){
       if (!pool[c][q.level]) continue;
       if (seen.has(q.key)) continue;
       seen.add(q.key);
@@ -2143,38 +2187,44 @@ async function buildPool(categories, n, onProgress, shouldCancel){
   // dropped rather than shadowing it.
   for (const q of loadCarryover()){
     if (!q || !categories.includes(q.category)) continue;
+    if (regionFilter && q.region !== regionFilter) continue; // API-sourced carryover has no region tag, so this drops it whenever a region is picked
     if (!pool[q.category] || !pool[q.category][q.level]) continue;
     if (seen.has(q.key)) continue;
     seen.add(q.key);
     pool[q.category][q.level].push(q);
   }
 
-  onProgress?.({ key:"fetchingQuestions" });
-  const triviaCats = [...new Set(categories.flatMap(c => TRIVIA_API_CATEGORIES[c]||[]))];
-  const calls = [];
-  // Two calls PER difficulty (rather than more calls of the same easy/medium/hard mix) -
-  // Trivia API's random sample is skewed hard toward medium/hard (measured live: a 50-question
-  // mixed batch came back ~3 easy / 27 medium / 20 hard), so asking for a mixed batch repeatedly
-  // mostly buys more medium/hard duplicates. Requesting each difficulty explicitly is what
-  // actually clears every category's easy bucket without falling through to the throttled
-  // OpenTDB top-up - measured live: 10/27 thin buckets down to 3/27 for a 9-category Mix.
-  if (triviaCats.length) for (const d of ["easy","medium","hard"]) for (let i=0;i<2;i++) calls.push(fetchTriviaApi({categories:triviaCats, limit:50, difficulties:[d]}).then(r=>ingest(r,"trivia-api")));
-  if (categories.includes("games")) calls.push(fetchTriviaApi({tags:TRIVIA_API_TAGS.games, limit:50}).then(r=>ingest(r,"trivia-api","games")));
-  await Promise.all(calls);
+  // A region filter means a curated-only pool - neither API tags its questions by region, so
+  // there is nothing here to filter by; skip the fetch entirely rather than pulling in
+  // region-unlabelled questions no filter could ever apply to.
+  if (!regionFilter){
+    onProgress?.({ key:"fetchingQuestions" });
+    const triviaCats = [...new Set(categories.flatMap(c => TRIVIA_API_CATEGORIES[c]||[]))];
+    const calls = [];
+    // Two calls PER difficulty (rather than more calls of the same easy/medium/hard mix) -
+    // Trivia API's random sample is skewed hard toward medium/hard (measured live: a 50-question
+    // mixed batch came back ~3 easy / 27 medium / 20 hard), so asking for a mixed batch repeatedly
+    // mostly buys more medium/hard duplicates. Requesting each difficulty explicitly is what
+    // actually clears every category's easy bucket without falling through to the throttled
+    // OpenTDB top-up - measured live: 10/27 thin buckets down to 3/27 for a 9-category Mix.
+    if (triviaCats.length) for (const d of ["easy","medium","hard"]) for (let i=0;i<2;i++) calls.push(fetchTriviaApi({categories:triviaCats, limit:50, difficulties:[d]}).then(r=>ingest(r,"trivia-api")));
+    if (categories.includes("games")) calls.push(fetchTriviaApi({tags:TRIVIA_API_TAGS.games, limit:50}).then(r=>ingest(r,"trivia-api","games")));
+    await Promise.all(calls);
 
-  const need = [];
-  for (const c of categories) for (const L of ["easy","medium","hard"]) if (pool[c][L].length < minBucket) need.push([c,L]);
-  if (need.length){
-    const capped = need.slice(0, MAX_OPENTDB_TOPUPS);
-    for (let i=0; i<capped.length; i++){
-      if (shouldCancel?.()) throw new RoundCancelled();
-      const [c,L] = capped[i];
-      onProgress?.({ key:"toppingUp", i:i+1, total:capped.length });
-      const ids = OPENTDB_CATEGORIES[c]||[];
-      if (!ids.length) continue;
-      const id = ids[Math.floor(Math.random()*ids.length)];
-      const r = await fetchOpenTDB({categoryId:id, difficulty:L, amount:50}); // throttles itself
-      ingest(r, "opentdb", c);
+    const need = [];
+    for (const c of categories) for (const L of ["easy","medium","hard"]) if (pool[c][L].length < minBucket) need.push([c,L]);
+    if (need.length){
+      const capped = need.slice(0, MAX_OPENTDB_TOPUPS);
+      for (let i=0; i<capped.length; i++){
+        if (shouldCancel?.()) throw new RoundCancelled();
+        const [c,L] = capped[i];
+        onProgress?.({ key:"toppingUp", i:i+1, total:capped.length });
+        const ids = OPENTDB_CATEGORIES[c]||[];
+        if (!ids.length) continue;
+        const id = ids[Math.floor(Math.random()*ids.length)];
+        const r = await fetchOpenTDB({categoryId:id, difficulty:L, amount:50}); // throttles itself
+        ingest(r, "opentdb", c);
+      }
     }
   }
   // Freshness is a sort key, not a filter. The previous version dropped seen questions from a
@@ -2758,7 +2808,7 @@ function carryOverUnserved(pool){
 function loadSettings(){
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch {}
-  return Object.assign({ n:15, categories:[...CATEGORY_KEYS], style:"choice", intensity:"adaptive", streaks:true, hellInsurance:false, extended:false }, s||{});
+  return Object.assign({ n:15, categories:[...CATEGORY_KEYS], style:"choice", intensity:"adaptive", streaks:true, hellInsurance:false, extended:false, region:"any" }, s||{});
 }
 function saveSettings(s){ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {} }
 function loadPB(){
@@ -2800,6 +2850,7 @@ function wireSeg(id, field, onChange){
 wireSeg("segN", "n");
 wireSeg("segStyle", "style");
 wireSeg("segIntensity", "intensity");
+wireSeg("segRegion", "region");
 
 on($("toggleStreaks"), "change", e => { settings.streaks = e.target.checked; refreshSetup(); });
 on($("toggleInsurance"), "change", e => { settings.hellInsurance = e.target.checked; refreshSetup(); });
@@ -2813,6 +2864,7 @@ function refreshSetup(){
   $("segN").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v==String(settings.n)));
   $("segStyle").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.style));
   $("segIntensity").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.intensity));
+  $("segRegion").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.region));
   $("toggleStreaks").checked = settings.streaks;
   $("toggleInsurance").checked = settings.hellInsurance;
   $("toggleInsurance").disabled = !settings.streaks;
@@ -2864,7 +2916,7 @@ on($("startRoundBtn"), "click", async () => {
   $("loadingSub").textContent = t("fetchingQuestions");
   $("loadingCancel").classList.remove("hide");
   try {
-    const pool = await buildPool(settings.categories, settings.n, p => $("loadingSub").textContent = progressText(p), () => loadingCancelFlag);
+    const pool = await buildPool(settings.categories, settings.n, p => $("loadingSub").textContent = progressText(p), () => loadingCancelFlag, settings.region);
     const total = LEVELS.filter(L=>L!=="hell").reduce((s,L)=>s+poolTotal(pool, settings.categories, L), 0);
     if (total < Math.min(6, settings.n)){
       $("errorMsg").textContent = t("errorTooLittle");
@@ -3471,7 +3523,7 @@ function rmRenderLobbySettings(settings, mix){
   const active = new Set(settings.categories.includes("mix") ? CATEGORY_KEYS : settings.categories);
   $("lobbyCatGrid").querySelectorAll("[data-c]").forEach(b => b.classList.toggle("on", active.has(b.dataset.c)));
 
-  const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"]];
+  const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegRegion","region"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"]];
   for (const [id,field] of segs){
     $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", String(b.dataset.v)===String(settings[field])));
   }
@@ -3488,6 +3540,7 @@ function rmWireLobbySeg(id, field, parse){
 rmWireLobbySeg("lobbySegN","n",Number);
 rmWireLobbySeg("lobbySegStyle","style");
 rmWireLobbySeg("lobbySegIntensity","intensity");
+rmWireLobbySeg("lobbySegRegion","region");
 rmWireLobbySeg("lobbySegTeams","teams",Number);
 rmWireLobbySeg("lobbySegPace","revealPace");
 on($("lobbyToggleStreaks"), "change", () => rmSend({type:"configure", streaks:$("lobbyToggleStreaks").checked}));
