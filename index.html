@@ -104,8 +104,33 @@ p{margin:0}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px}
 .iconbtn{width:42px;height:42px;border-radius:var(--pill);border:none;background:var(--raise);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px}
 .iconbtn:hover{background:var(--line)}
-.langsel{height:42px;border-radius:var(--pill);border:none;background:var(--raise);color:var(--text);padding:0 16px 0 12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
-.langsel:hover{background:var(--line)}
+.langsel{position:relative}
+.langsel-btn{
+  height:42px;border-radius:var(--pill);border:none;background:var(--raise);color:var(--text);
+  padding:0 14px 0 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:10px;
+}
+.langsel-btn:hover{background:var(--line)}
+.langsel-arrow{width:16px;height:16px;flex:none;color:var(--muted);transition:transform .2s cubic-bezier(.16,1,.3,1)}
+.langsel-btn[aria-expanded="true"] .langsel-arrow{transform:rotate(180deg)}
+
+.langsel-list{
+  position:absolute;top:calc(100% + 8px);left:0;z-index:20;min-width:168px;margin:0;padding:6px;
+  list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:2px;
+  transform-origin:top left;animation:langsel-in .16s cubic-bezier(.16,1,.3,1);
+}
+.langsel-list[hidden]{display:none}
+[dir="rtl"] .langsel-list{left:auto;right:0;transform-origin:top right}
+@keyframes langsel-in{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.langsel-list{animation:none}}
+.langsel-opt{
+  padding:10px 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.langsel-opt:hover, .langsel-opt:focus-visible{background:var(--raise);outline:none}
+.langsel-opt[aria-selected="true"]{color:var(--accent)}
+.langsel-opt[aria-selected="true"]::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
 
 /* ---------------- Wordmark ---------------- */
 .wordmark{
@@ -263,6 +288,70 @@ p{margin:0}
 [dir="rtl"] .mixlegend span.dot{margin-right:0;margin-left:5px}
 [dir="rtl"] .catrow .frac{text-align:left}
 
+/* ---------------- Rooms (multiplayer) ---------------- */
+/* Entry flow (name -> home) is one centred panel per screen, not several stacked .card
+   blocks - mirrors find-it-site's .mp-modal/.mp-screen rhythm (see its DEPLOY-adjacent
+   comment "an inline card ... not a popup dialog"), just in Answer It's own card/token
+   language instead of copying its CSS verbatim. */
+.rm-panel{max-width:480px;margin:0 auto;width:100%;text-align:center;padding:40px 36px}
+@media (max-width:560px){ .rm-panel{padding:30px 22px} }
+@media (max-width:380px){ .codeinputs{gap:6px} .codeinputs input{width:36px;height:46px;font-size:18px} }
+.rm-panel h2{margin-bottom:10px;font-size:clamp(22px,5vw,28px)}
+.rm-sub{color:var(--muted);font-size:14.5px;line-height:1.6;margin:0 0 26px}
+.rm-name-input{
+  width:100%;box-sizing:border-box;padding:17px 18px;border-radius:var(--pill);text-align:center;
+  border:2px solid var(--line);background:var(--sunk);color:var(--text);font-family:inherit;
+  font-size:17px;margin-bottom:20px;
+}
+.rm-name-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--focus)}
+.rm-edit{border:0;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:14px;padding:2px 8px;display:inline-flex;align-items:center;gap:5px;vertical-align:middle}
+.rm-edit:hover{color:var(--accent)}
+.rm-edit .icon{width:15px;height:15px}
+.rm-divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11.5px;margin:28px 0 20px;text-transform:uppercase;letter-spacing:.12em}
+.rm-divider::before,.rm-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+#screen-room-home .codeinputs{margin-bottom:20px}
+#screen-room-home .btn-lg + .link-btn{margin-top:18px;display:inline-block}
+.roomcode{font-family:"Fredoka";font-weight:700;font-size:clamp(36px,10vw,52px);letter-spacing:.08em;text-align:center;color:var(--accent);cursor:pointer;user-select:all}
+.roomcode-hint{text-align:center;font-size:12.5px;color:var(--muted)}
+.codeinputs{display:flex;gap:9px;justify-content:center}
+.codeinputs input{width:46px;height:56px;text-align:center;font-size:23px;font-weight:700;border-radius:var(--radius-sm);border:2px solid var(--line);background:var(--sunk);color:var(--text);font-family:"Fredoka",inherit}
+.codeinputs input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--focus)}
+.plist{display:flex;flex-direction:column;gap:6px}
+.prow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);background:var(--raise);font-size:14px}
+.prow.me{outline:2px solid var(--accent);outline-offset:-2px}
+.prow .pname{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow.offline{opacity:.5}
+.badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:var(--pill);background:var(--sunk);color:var(--muted)}
+.badge.host{background:var(--accent);color:#fff}
+.teamdot{width:10px;height:10px;border-radius:50%;flex:none}
+.teamgrid{display:flex;gap:8px;flex-wrap:wrap}
+.teamchip{display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:var(--pill);border:2px solid transparent;background:var(--raise);color:var(--text);font-weight:600;font-size:13px;cursor:pointer}
+.teamchip.on{border-color:var(--accent)}
+.answered-ticker{color:var(--muted);font-size:13px;text-align:center}
+.leaderboard{display:flex;flex-direction:column;gap:6px}
+.lbrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);background:var(--raise);transition:transform .3s ease}
+.lbrow .rank{width:22px;font-family:"Fredoka";font-weight:600;color:var(--muted);flex:none}
+.lbrow .lbname{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbrow .lbscore{font-family:"Fredoka";font-weight:600}
+.dist-row{display:flex;align-items:center;gap:8px;font-size:13px}
+.dist-row .dist-bar{flex:1;height:20px;background:var(--sunk);border-radius:var(--radius-sm);overflow:hidden}
+.dist-row .dist-bar>div{height:100%;transition:width .4s ease}
+.dist-row .dist-n{width:26px;text-align:end;color:var(--muted)}
+.openword{display:flex;flex-wrap:wrap;gap:6px}
+.openword span{padding:5px 10px;border-radius:var(--pill);background:var(--raise);font-size:12.5px}
+.openword span.correct{background:var(--lvl-easy);color:#fff}
+.judgerow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);background:var(--raise)}
+.judgerow .jtext{flex:1;font-size:14px}
+.judgerow .jname{font-weight:600;font-size:12.5px;color:var(--muted)}
+.judge-actions{display:flex;gap:6px}
+.judge-actions button{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center}
+.judge-actions .yes{background:var(--lvl-easy)}
+.judge-actions .no{background:var(--lvl-hell)}
+.judge-actions button.picked{outline:3px solid var(--text);outline-offset:2px}
+body.spectating .qtext{font-size:clamp(26px,6vw,40px)}
+body.spectating .optgrid, body.spectating .openrow{display:none !important}
+.spectator-note{text-align:center;color:var(--muted);font-size:14px;padding:16px}
+
 /* ---------------- Motion / a11y ---------------- */
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
@@ -279,11 +368,17 @@ p{margin:0}
   <!-- ============== MENU ============== -->
   <section class="screen active" id="screen-menu">
     <div class="topbar">
-      <select class="langsel" id="langSel" data-i18n-title="language" data-i18n-aria="language">
-        <option value="en">English</option>
-        <option value="fr">Français</option>
-        <option value="ar">العربية</option>
-      </select>
+      <div class="langsel" id="langSel">
+        <button type="button" class="langsel-btn" id="langSelBtn" aria-haspopup="listbox" aria-expanded="false" data-i18n-title="language" data-i18n-aria="language">
+          <span id="langSelLabel">English</span>
+          <span class="langsel-arrow" data-icon="chevronDown"></span>
+        </button>
+        <ul class="langsel-list" id="langSelList" role="listbox" tabindex="-1" hidden>
+          <li role="option" class="langsel-opt" data-value="en" aria-selected="true" tabindex="-1">English</li>
+          <li role="option" class="langsel-opt" data-value="fr" aria-selected="false" tabindex="-1">Français</li>
+          <li role="option" class="langsel-opt" data-value="ar" aria-selected="false" tabindex="-1">العربية</li>
+        </ul>
+      </div>
       <button class="iconbtn" id="themeBtn" data-i18n-title="toggleTheme" data-i18n-aria="toggleTheme"></button>
     </div>
     <div class="wrap" style="justify-content:center;text-align:center;gap:26px">
@@ -293,7 +388,7 @@ p{margin:0}
       </div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <button class="btn btn-primary btn-lg" id="menuPlaySolo"><span data-icon="play"></span> <span data-i18n="playSolo"></span></button>
-        <button class="btn btn-lg" id="menuRooms" disabled data-i18n-title="roomsTitle"><span data-icon="users"></span> <span data-i18n="roomsComingSoon"></span></button>
+        <button class="btn btn-lg" id="menuRooms"><span data-icon="users"></span> <span data-i18n="roomsMenuLabel"></span></button>
       </div>
       <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap">
         <button class="link-btn" id="menuHowTo" data-i18n="howToPlay"></button>
@@ -480,6 +575,231 @@ p{margin:0}
     </div>
   </section>
 
+  <!-- ============== ROOM: NAME ============== -->
+  <section class="screen" id="screen-room-name">
+    <div class="topbar">
+      <button class="iconbtn" id="roomNameBack" data-icon="arrowLeft" data-i18n-aria="back"></button>
+      <span style="width:42px"></span><span style="width:42px"></span>
+    </div>
+    <div class="wrap" style="justify-content:center">
+      <div class="card rm-panel">
+        <h2 data-i18n="playOnlineTitle"></h2>
+        <p class="rm-sub" data-i18n="nicknameSub"></p>
+        <input class="rm-name-input" id="roomNickInput" type="text" maxlength="24" autocomplete="off" data-i18n-placeholder="nicknamePlaceholder">
+        <p class="notice hide" id="roomNameMsg"></p>
+        <button class="btn btn-primary btn-lg" id="roomNameContinueBtn" data-i18n="continueBtn"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== ROOM: HOME (create / join) ============== -->
+  <section class="screen" id="screen-room-home">
+    <div class="topbar">
+      <button class="iconbtn" id="roomHomeBack" data-icon="arrowLeft" data-i18n-aria="back"></button>
+      <span style="width:42px"></span><span style="width:42px"></span>
+    </div>
+    <div class="wrap" style="justify-content:center">
+      <div class="card rm-panel">
+        <h2><span data-i18n="heyLabel"></span> <span id="roomHomeName"></span> <button class="rm-edit" id="roomEditNameBtn" type="button"><span data-icon="pencil"></span> <span data-i18n="editBtn"></span></button></h2>
+        <p class="rm-sub" data-i18n="homeSub"></p>
+        <button class="btn btn-primary btn-lg" id="roomCreateBtn"><span data-icon="play"></span> <span data-i18n="createRoomBtn"></span></button>
+        <div class="rm-divider"><span data-i18n="joinDividerLabel"></span></div>
+        <div class="codeinputs" id="roomJoinInputs"></div>
+        <p class="notice hide" id="roomEntryMsg"></p>
+        <button class="btn btn-lg" id="roomJoinBtn" data-i18n="joinRoomBtn"></button>
+        <button class="link-btn" id="roomBigscreenBtn" data-i18n="bigscreenBtn"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== ROOM: LOBBY ============== -->
+  <section class="screen" id="screen-lobby">
+    <div class="topbar">
+      <button class="iconbtn" id="lobbyLeave" data-icon="arrowLeft" data-i18n-aria="back"></button>
+      <h2 style="font-size:18px" data-i18n="lobbyTitle"></h2>
+      <span style="width:42px"></span>
+    </div>
+    <div class="wrap">
+      <div class="card" style="text-align:center">
+        <div class="roomcode" id="lobbyCode" title="">------</div>
+        <p class="roomcode-hint" id="lobbyCodeHint" data-i18n="tapToCopy"></p>
+      </div>
+
+      <div class="card">
+        <div class="section-title" data-i18n="playersTitle"></div>
+        <div class="plist" id="lobbyPlayers"></div>
+      </div>
+
+      <div class="card hide" id="lobbyTeamsCard">
+        <div class="section-title" data-i18n="pickYourTeam"></div>
+        <div class="teamgrid" id="lobbyTeamGrid"></div>
+      </div>
+
+      <div id="lobbySettingsHost" class="hide">
+        <div class="card">
+          <div class="section-title" data-i18n="categoriesTitle"></div>
+          <div class="catgrid" id="lobbyCatGrid"></div>
+        </div>
+        <div class="card">
+          <div class="section-title" data-i18n="questionsTitle"></div>
+          <div class="seg" id="lobbySegN">
+            <button data-v="10">10</button><button data-v="15">15</button><button data-v="20">20</button><button data-v="30">30</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title" data-i18n="answerStyleTitle"></div>
+          <div class="seg" id="lobbySegStyle">
+            <button data-v="choice" data-i18n="styleChoice"></button>
+            <button data-v="open" data-i18n="styleOpen"></button>
+            <button data-v="mixed" data-i18n="styleMixed"></button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title" data-i18n="intensityTitle"></div>
+          <div class="seg" id="lobbySegIntensity">
+            <button data-v="chill" data-i18n="intensityChill"></button>
+            <button data-v="standard" data-i18n="intensityStandard"></button>
+            <button data-v="brutal" data-i18n="intensityBrutal"></button>
+            <button data-v="adaptive" data-i18n="intensityAdaptive"></button>
+          </div>
+          <div class="mixbar" id="lobbyMixBar" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <div class="togglerow">
+            <div><div class="lbl" data-i18n="streaksLabel"></div></div>
+            <label class="switch"><input type="checkbox" id="lobbyToggleStreaks" checked><span class="track"><span class="knob"></span></span></label>
+          </div>
+          <div class="togglerow">
+            <div><div class="lbl" data-i18n="teamsLabel"></div></div>
+            <div class="seg" id="lobbySegTeams" style="max-width:220px">
+              <button data-v="0" data-i18n="teamsOff"></button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button>
+            </div>
+          </div>
+          <div class="togglerow">
+            <div><div class="lbl" data-i18n="revealPaceLabel"></div></div>
+            <div class="seg" id="lobbySegPace" style="max-width:220px">
+              <button data-v="auto" data-i18n="revealPaceAuto"></button><button data-v="host" data-i18n="revealPaceHost"></button>
+            </div>
+          </div>
+          <div class="togglerow">
+            <div><div class="lbl" data-i18n="judgeOnlyLabel"></div><div class="sub" data-i18n="judgeOnlySub"></div></div>
+            <label class="switch"><input type="checkbox" id="lobbyToggleJudgeOnly"><span class="track"><span class="knob"></span></span></label>
+          </div>
+        </div>
+      </div>
+      <p class="notice hide" id="lobbySettingsGuest" data-i18n="waitingForHost"></p>
+
+      <p class="notice hide" id="lobbyMsg"></p>
+      <button class="btn btn-primary btn-lg" id="lobbyStartBtn"><span data-icon="play"></span> <span data-i18n="startRace"></span></button>
+    </div>
+  </section>
+
+  <!-- ============== ROOM: QUESTION ============== -->
+  <section class="screen" id="screen-room-question">
+    <div class="wrap" style="gap:14px">
+      <div class="qtop">
+        <span class="chip chip-level" id="rqLevelChip">EASY</span>
+        <span class="chip" id="rqCatChip">General</span>
+        <span class="progress-txt" id="rqProgress">Question 1 of 15</span>
+      </div>
+      <p class="answered-ticker" id="rqAnswered"></p>
+      <div class="streakpill hide" id="rqStreakPill" style="margin-left:0"><span data-icon="flame"></span> <span id="rqStreakVal">0</span> <span data-i18n="streakWord"></span> · <span id="rqStreakMult">×1.0</span></div>
+      <div>
+        <div class="timerbar"><div class="timerbar-fill" id="rqTimerFill"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span class="timer-label"><span id="rqTimerLabel">15</span>s</span>
+        </div>
+      </div>
+      <h2 class="qtext" id="rqText"></h2>
+
+      <div class="optgrid" id="rqOptions"></div>
+      <div class="openrow hide" id="rqOpenRow">
+        <input class="openinput" id="rqOpenInput" type="text" autocomplete="off" autocorrect="off" spellcheck="false" data-i18n-placeholder="typeYourAnswer" data-i18n-aria="yourAnswerAria">
+        <button class="btn btn-primary" id="rqOpenSubmit"><span data-i18n="send"></span> <span data-icon="send"></span></button>
+      </div>
+      <p class="lockednote hide" id="rqLockedNote"><span data-icon="hourglass"></span> <span data-i18n="lockedWaiting"></span></p>
+      <p class="spectator-note hide" id="rqSpectatorNote" data-i18n="spectatingNote"></p>
+    </div>
+  </section>
+
+  <!-- ============== ROOM: JUDGE PANEL (host only) ============== -->
+  <section class="screen" id="screen-room-judge">
+    <div class="wrap" style="gap:14px">
+      <h2 data-i18n="judgePanelTitle"></h2>
+      <p style="color:var(--muted);font-size:13px" data-i18n="correctAnswerLabel"></p>
+      <p class="reveal-answer" id="judgeAnswer">-</p>
+      <div class="card">
+        <div class="section-title" data-i18n="disputedAnswers"></div>
+        <div class="plist" id="judgeDisputes"></div>
+      </div>
+      <p style="color:var(--muted);font-size:13px" id="judgeAutoNote"></p>
+      <button class="btn btn-primary btn-lg" id="judgeDoneBtn" data-i18n="judgeDone"></button>
+    </div>
+  </section>
+
+  <!-- ============== ROOM: REVEAL ============== -->
+  <section class="screen" id="screen-room-reveal">
+    <div class="wrap" style="gap:14px" aria-live="polite">
+      <div class="qtop">
+        <span class="chip chip-level" id="rrLevelChip">EASY</span>
+        <span class="chip" id="rrCatChip">General</span>
+      </div>
+      <p style="color:var(--muted);font-size:13px" data-i18n="correctAnswerLabel"></p>
+      <p class="reveal-answer" id="rrAnswer">-</p>
+      <p class="notice hide" id="rrDisputeNote"><span data-icon="scale"></span> <span data-i18n="disputeNote"></span></p>
+      <p class="notice hide" id="rrNobodyNote" data-i18n="nobodyGotIt"></p>
+
+      <div id="rrDistribution"></div>
+
+      <div class="reveal-result hide" id="rrMyResultWrap">
+        <span class="mark" id="rrMark"></span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:20px" id="rrPoints">+600</div>
+          <div class="reveal-stats">
+            <span><b id="rrTime">1.2s</b></span>
+            <span><span data-i18n="streakWord"></span> <b id="rrStreak">2</b></span>
+            <span id="rrMultWrap">×<b id="rrMult">1.1</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" data-i18n="leaderboardTitle"></div>
+        <div class="leaderboard" id="rrLeaderboard"></div>
+      </div>
+
+      <button class="btn btn-primary btn-lg hide" id="rrNextBtn">Next <span data-icon="arrowRight"></span></button>
+      <p class="answered-ticker hide" id="rrWaitingNote" data-i18n="waitingForHostNext"></p>
+    </div>
+  </section>
+
+  <!-- ============== ROOM: PODIUM ============== -->
+  <section class="screen" id="screen-room-podium">
+    <div class="wrap" style="gap:18px">
+      <h2 style="text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span data-i18n="roundComplete"></span> <span data-icon="flag"></span></h2>
+
+      <div class="card hide" id="rpTeamsCard">
+        <div class="section-title" data-i18n="teamsTitle"></div>
+        <div id="rpTeams"></div>
+      </div>
+      <div class="card">
+        <div class="section-title" data-i18n="finalStandings"></div>
+        <div class="leaderboard" id="rpStandings"></div>
+      </div>
+      <div class="card">
+        <div class="section-title" data-i18n="perCategoryAccuracy"></div>
+        <div id="rpCatBreakdown"></div>
+      </div>
+
+      <div class="btn-row hide" id="rpHostControls">
+        <button class="btn btn-primary" id="rpRematch"><span data-icon="repeat"></span> <span data-i18n="playAgain"></span></button>
+        <button class="btn" id="rpSettings"><span data-icon="settings"></span> <span data-i18n="changeSettings"></span></button>
+      </div>
+      <p class="answered-ticker hide" id="rpGuestNote" data-i18n="waitingForHostRematch"></p>
+      <button class="link-btn" id="rpLeave" data-i18n="backToMenu"></button>
+    </div>
+  </section>
+
 </div>
 
 <!-- Hell / Double interstitials float above everything -->
@@ -561,6 +881,8 @@ const ICONS = {
   snowflake: '<path d="m10 20-1.25-2.5L6 18" /> <path d="M10 4 8.75 6.5 6 6" /> <path d="m14 20 1.25-2.5L18 18" /> <path d="m14 4 1.25 2.5L18 6" /> <path d="m17 21-3-6h-4" /> <path d="m17 3-3 6 1.5 3" /> <path d="M2 12h6.5L10 9" /> <path d="m20 10-1.5 2 1.5 2" /> <path d="M22 12h-6.5L14 15" /> <path d="m4 10 1.5 2L4 14" /> <path d="m7 21 3-6-1.5-3" /> <path d="m7 3 3 6h4" />',
   skull: '<path d="m12.5 17-.5-1-.5 1h1z" /> <path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z" /> <circle cx="15" cy="12" r="1" /> <circle cx="9" cy="12" r="1" />',
   timer: '<line x1="10" x2="14" y1="2" y2="2" /> <line x1="12" x2="15" y1="14" y2="11" /> <circle cx="12" cy="14" r="8" />',
+  chevronDown: '<path d="m6 9 6 6 6-6" />',
+  pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
 };
 function icon(name, cls){
   return `<svg class="icon${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||""}</svg>`;
@@ -582,8 +904,35 @@ const I18N = {
 en: { dir:"ltr", langName:"English",
   toggleTheme:"Toggle theme", language:"Language",
   tagline:"Do you know it, and how fast?", playSolo:"Play solo",
-  roomsComingSoon:"Create / join a room - coming soon", roomsTitle:"Multiplayer rooms are coming in the next update",
-  howToPlay:"How to play", credits:"Credits",
+  roomsMenuLabel:"Play with friends", howToPlay:"How to play", credits:"Credits",
+  playOnlineTitle:"Play online", nicknameSub:"Pick a name - you'll get a unique player ID on this device, no password needed.",
+  nicknamePlaceholder:"Your name", continueBtn:"Continue",
+  heyLabel:"Hey,", editBtn:"edit",
+  homeSub:"Create a room and share the code, or join one with a code below.",
+  createRoomBtn:"Create a room", joinDividerLabel:"or join with a code", joinRoomBtn:"Join room",
+  bigscreenBtn:"Big-screen mode (join as spectator)",
+  enterNickname:"Enter a name first.", enterCode:"Enter the 6-digit room code.",
+  couldntReachServer:"Couldn't reach the game server. Check your connection and try again.",
+  couldntJoinRoom:"Couldn't join that room - check the code, or it may not exist any more.",
+  lobbyTitle:"Lobby", tapToCopy:"Tap the code to copy it", playersTitle:"Players",
+  pickYourTeam:"Pick your team", teamsLabel:"Teams", teamsOff:"Off",
+  revealPaceLabel:"Reveal pace", revealPaceAuto:"Auto (5s)", revealPaceHost:"Host clicks Next",
+  judgeOnlyLabel:"I'll host, not play", judgeOnlySub:"You become a spectator with judging powers over open-answer disputes",
+  waitingForHost:"The host is setting up the round.", startRace:"Start race",
+  youAreHost:"You're the host", youAreJudge:"Judging", youAreSpectator:"Spectating",
+  roleHost:"Host", roleSpectator:"Spectator", roleOffline:"Offline",
+  kickBtn:"Kick", leaveRoomBtn:"Leave room", roomFull:"This room already started - joining as a spectator.",
+  answeredOf:(n,total)=>`${n} of ${total} answered`,
+  spectatingNote:"You're watching this one - no input needed.",
+  judgePanelTitle:"Judge the disputed answers", disputedAnswers:"Disputed",
+  judgeDone:"Done", judgeAutoApproved:(n)=>`${n} answer(s) auto-approved, nothing to review.`,
+  nobodyGotIt:"Nobody got this one.", leaderboardTitle:"Leaderboard",
+  waitingForHostNext:"Waiting for the host to continue…",
+  teamsTitle:"Teams", finalStandings:"Final standings",
+  waitingForHostRematch:"Waiting for the host to rematch or leave…",
+  mixShiftUp:"Too easy? Turning it up.", mixShiftDown:"Easing off.",
+  hostLeftPromoted:"The host left - you're the host now.", youWereKicked:"You were removed from the room.",
+  roomClosed:"This room has closed.",
   soloRoundTitle:"Solo round", back:"Back", categoriesTitle:"Categories",
   catGeneral:"General", catScience:"Science", catHistory:"History", catGeography:"Geography",
   catMusic:"Music", catScreen:"Film & TV", catGames:"Games", catSport:"Sport", catArts:"Arts", catCulture:"Culture",
@@ -608,6 +957,7 @@ en: { dir:"ltr", langName:"English",
   questionOf:(i,n)=>`Question ${i} of ${n}`, theDouble:"The Double", streakWord:"streak",
   typeYourAnswer:"Type your answer…", yourAnswerAria:"Your answer", send:"Send",
   lockedWaiting:"Locked in - waiting for the clock…",
+  judgingWait:"⚖️ Host is checking answers…",
   secondsLeft:(n)=>`${n} seconds left`, timesUp:"Time's up",
   hellQuestionAria:"Hell question", theDoubleAria:"The Double",
   hellBig:"HELL", hellRush:(s)=>`RUSH - ${s}s, faster clock`, hellBlind:"BLIND - no options, type your answer",
@@ -643,8 +993,35 @@ en: { dir:"ltr", langName:"English",
 fr: { dir:"ltr", langName:"Français",
   toggleTheme:"Changer de thème", language:"Langue",
   tagline:"Le sais-tu, et à quelle vitesse ?", playSolo:"Jouer en solo",
-  roomsComingSoon:"Créer / rejoindre une salle - bientôt disponible", roomsTitle:"Les salles multijoueurs arrivent dans une prochaine mise à jour",
-  howToPlay:"Comment jouer", credits:"Crédits",
+  roomsMenuLabel:"Jouer entre amis", howToPlay:"Comment jouer", credits:"Crédits",
+  playOnlineTitle:"Jouer en ligne", nicknameSub:"Choisissez un nom - vous recevrez un identifiant unique sur cet appareil, sans mot de passe.",
+  nicknamePlaceholder:"Votre nom", continueBtn:"Continuer",
+  heyLabel:"Salut,", editBtn:"modifier",
+  homeSub:"Créez une salle et partagez le code, ou rejoignez-en une avec un code ci-dessous.",
+  createRoomBtn:"Créer une salle", joinDividerLabel:"ou rejoindre avec un code", joinRoomBtn:"Rejoindre la salle",
+  bigscreenBtn:"Mode grand écran (rejoindre en spectateur)",
+  enterNickname:"Entrez d'abord un nom.", enterCode:"Entrez le code à 6 chiffres de la salle.",
+  couldntReachServer:"Impossible de joindre le serveur de jeu. Vérifiez votre connexion et réessayez.",
+  couldntJoinRoom:"Impossible de rejoindre cette salle - vérifiez le code, ou elle n'existe peut-être plus.",
+  lobbyTitle:"Salle d'attente", tapToCopy:"Touchez le code pour le copier", playersTitle:"Joueurs",
+  pickYourTeam:"Choisissez votre équipe", teamsLabel:"Équipes", teamsOff:"Désactivées",
+  revealPaceLabel:"Rythme de révélation", revealPaceAuto:"Auto (5s)", revealPaceHost:"L'hôte clique sur Suivant",
+  judgeOnlyLabel:"J'anime, je ne joue pas", judgeOnlySub:"Vous devenez spectateur avec le pouvoir de trancher les réponses libres contestées",
+  waitingForHost:"L'hôte configure la partie.", startRace:"Démarrer la partie",
+  youAreHost:"Vous êtes l'hôte", youAreJudge:"Arbitrage", youAreSpectator:"Spectateur",
+  roleHost:"Hôte", roleSpectator:"Spectateur", roleOffline:"Hors ligne",
+  kickBtn:"Exclure", leaveRoomBtn:"Quitter la salle", roomFull:"Cette salle a déjà commencé - vous rejoignez en spectateur.",
+  answeredOf:(n,total)=>`${n} sur ${total} ont répondu`,
+  spectatingNote:"Vous observez cette question - aucune action nécessaire.",
+  judgePanelTitle:"Tranchez les réponses contestées", disputedAnswers:"Contestées",
+  judgeDone:"Terminé", judgeAutoApproved:(n)=>`${n} réponse(s) approuvée(s) automatiquement, rien à revoir.`,
+  nobodyGotIt:"Personne n'a trouvé celle-ci.", leaderboardTitle:"Classement",
+  waitingForHostNext:"En attente que l'hôte continue…",
+  teamsTitle:"Équipes", finalStandings:"Classement final",
+  waitingForHostRematch:"En attente que l'hôte relance une partie ou quitte…",
+  mixShiftUp:"Trop facile ? On monte le niveau.", mixShiftDown:"On lève le pied.",
+  hostLeftPromoted:"L'hôte est parti - vous êtes maintenant l'hôte.", youWereKicked:"Vous avez été retiré de la salle.",
+  roomClosed:"Cette salle est fermée.",
   soloRoundTitle:"Partie solo", back:"Retour", categoriesTitle:"Catégories",
   catGeneral:"Général", catScience:"Sciences", catHistory:"Histoire", catGeography:"Géographie",
   catMusic:"Musique", catScreen:"Cinéma & TV", catGames:"Jeux", catSport:"Sport", catArts:"Arts", catCulture:"Culture",
@@ -669,6 +1046,7 @@ fr: { dir:"ltr", langName:"Français",
   questionOf:(i,n)=>`Question ${i} sur ${n}`, theDouble:"Le Double", streakWord:"série",
   typeYourAnswer:"Tapez votre réponse…", yourAnswerAria:"Votre réponse", send:"Envoyer",
   lockedWaiting:"Réponse verrouillée - en attente du chrono…",
+  judgingWait:"⚖️ L'hôte vérifie les réponses…",
   secondsLeft:(n)=>`${n} secondes restantes`, timesUp:"Temps écoulé",
   hellQuestionAria:"Question Enfer", theDoubleAria:"Le Double",
   hellBig:"ENFER", hellRush:(s)=>`RUSH - ${s}s, chrono accéléré`, hellBlind:"AVEUGLE - pas d'options, tapez votre réponse",
@@ -704,8 +1082,35 @@ fr: { dir:"ltr", langName:"Français",
 ar: { dir:"rtl", langName:"العربية",
   toggleTheme:"تبديل المظهر", language:"اللغة",
   tagline:"هل تعرف الإجابة، وبأي سرعة؟", playSolo:"العب منفردًا",
-  roomsComingSoon:"إنشاء / الانضمام إلى غرفة - قريبًا", roomsTitle:"غرف اللعب الجماعي قادمة في التحديث القادم",
-  howToPlay:"كيفية اللعب", credits:"الشكر والتقدير",
+  roomsMenuLabel:"اللعب مع الأصدقاء", howToPlay:"كيفية اللعب", credits:"الشكر والتقدير",
+  playOnlineTitle:"العب عبر الإنترنت", nicknameSub:"اختر اسمًا - ستحصل على معرّف لاعب فريد على هذا الجهاز، بلا كلمة مرور.",
+  nicknamePlaceholder:"اسمك", continueBtn:"متابعة",
+  heyLabel:"مرحبًا،", editBtn:"تعديل",
+  homeSub:"أنشئ غرفة وشارك الرمز، أو انضم إلى غرفة برمز أدناه.",
+  createRoomBtn:"إنشاء غرفة", joinDividerLabel:"أو انضم برمز", joinRoomBtn:"انضم إلى الغرفة",
+  bigscreenBtn:"وضع الشاشة الكبيرة (الانضمام كمُشاهد)",
+  enterNickname:"أدخل اسمًا أولاً.", enterCode:"أدخل رمز الغرفة المكوّن من 6 أرقام.",
+  couldntReachServer:"تعذّر الوصول إلى خادم اللعبة. تحقق من اتصالك وحاول مجددًا.",
+  couldntJoinRoom:"تعذّر الانضمام إلى هذه الغرفة - تحقق من الرمز، أو ربما لم تعد موجودة.",
+  lobbyTitle:"غرفة الانتظار", tapToCopy:"اضغط على الرمز لنسخه", playersTitle:"اللاعبون",
+  pickYourTeam:"اختر فريقك", teamsLabel:"الفرق", teamsOff:"معطّلة",
+  revealPaceLabel:"وتيرة الكشف", revealPaceAuto:"تلقائي (5 ثوانٍ)", revealPaceHost:"المضيف يضغط التالي",
+  judgeOnlyLabel:"أستضيف ولا ألعب", judgeOnlySub:"تصبح مُشاهدًا بصلاحية الفصل في الإجابات المفتوحة المتنازع عليها",
+  waitingForHost:"المضيف يُعِدّ الجولة.", startRace:"ابدأ السباق",
+  youAreHost:"أنت المضيف", youAreJudge:"تحكيم", youAreSpectator:"مُشاهدة",
+  roleHost:"مضيف", roleSpectator:"مُشاهد", roleOffline:"غير متصل",
+  kickBtn:"طرد", leaveRoomBtn:"مغادرة الغرفة", roomFull:"بدأت هذه الغرفة بالفعل - ستنضم كمُشاهد.",
+  answeredOf:(n,total)=>`أجاب ${n} من ${total}`,
+  spectatingNote:"أنت تُشاهد هذا السؤال - لا حاجة لأي إجراء.",
+  judgePanelTitle:"افصل في الإجابات المتنازع عليها", disputedAnswers:"متنازع عليها",
+  judgeDone:"تم", judgeAutoApproved:(n)=>`تمت الموافقة تلقائيًا على ${n} إجابة، لا شيء للمراجعة.`,
+  nobodyGotIt:"لم يُجب أحد عن هذا السؤال بشكل صحيح.", leaderboardTitle:"لوحة الصدارة",
+  waitingForHostNext:"بانتظار متابعة المضيف…",
+  teamsTitle:"الفرق", finalStandings:"الترتيب النهائي",
+  waitingForHostRematch:"بانتظار أن يبدأ المضيف جولة جديدة أو يغادر…",
+  mixShiftUp:"سهل جدًا؟ سنزيد الصعوبة.", mixShiftDown:"سنخفف الصعوبة.",
+  hostLeftPromoted:"غادر المضيف - أنت المضيف الآن.", youWereKicked:"تم إخراجك من الغرفة.",
+  roomClosed:"أُغلقت هذه الغرفة.",
   soloRoundTitle:"جولة فردية", back:"رجوع", categoriesTitle:"الفئات",
   catGeneral:"معلومات عامة", catScience:"العلوم", catHistory:"التاريخ", catGeography:"الجغرافيا",
   catMusic:"الموسيقى", catScreen:"السينما والتلفاز", catGames:"الألعاب", catSport:"الرياضة", catArts:"الفنون", catCulture:"المجتمع والثقافة",
@@ -730,6 +1135,7 @@ ar: { dir:"rtl", langName:"العربية",
   questionOf:(i,n)=>`السؤال ${i} من ${n}`, theDouble:"السؤال المضاعف", streakWord:"تتابع",
   typeYourAnswer:"اكتب إجابتك…", yourAnswerAria:"إجابتك", send:"إرسال",
   lockedWaiting:"تم قفل الإجابة - بانتظار انتهاء الوقت…",
+  judgingWait:"⚖️ المضيف يتحقق من الإجابات…",
   secondsLeft:(n)=>`تبقّى ${n} ثوانٍ`, timesUp:"انتهى الوقت",
   hellQuestionAria:"سؤال جحيم", theDoubleAria:"السؤال المضاعف",
   hellBig:"جحيم", hellRush:(s)=>`اندفاع - ${s} ثانية، مؤقّت أسرع`, hellBlind:"أعمى - بلا خيارات، اكتب إجابتك",
@@ -765,6 +1171,9 @@ ar: { dir:"rtl", langName:"العربية",
 };
 
 const LANG_KEY = "answerit_lang";
+// Each language's own name, in its own script - always shown as-is, never translated
+// (the point is to be findable by someone who doesn't yet read the current interface language).
+const LANG_NAMES = { en: "English", fr: "Français", ar: "العربية" };
 function detectLanguage(){
   try { const saved = localStorage.getItem(LANG_KEY); if (saved && I18N[saved]) return saved; } catch {}
   const candidates = (navigator.languages || [navigator.language || "en"]).map(l => l.slice(0,2).toLowerCase());
@@ -795,7 +1204,12 @@ function applyLanguage(newLang){
   try { localStorage.setItem(LANG_KEY, lang); } catch {}
   document.documentElement.lang = lang;
   document.documentElement.dir = I18N[lang].dir;
-  const sel = $("langSel"); if (sel) sel.value = lang;
+  const label = $("langSelLabel");
+  if (label) label.textContent = LANG_NAMES[lang] || lang;
+  const list = $("langSelList");
+  if (list) list.querySelectorAll(".langsel-opt").forEach(o => {
+    o.setAttribute("aria-selected", String(o.dataset.value === lang));
+  });
   mountI18n();
   $("setupBack").innerHTML = icon(navIcon("back"));
   $("revealNext").innerHTML = `${t("next")} ${icon(navIcon("forward"))}`;
@@ -845,7 +1259,44 @@ if (window.matchMedia){
   mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
 }
 const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-on($("langSel"), "change", (e) => applyLanguage(e.target.value));
+/* ---------------- Language dropdown ----------------
+   Custom listbox instead of a native <select>: the browser's own option-list chrome can't be
+   themed (light/dark tokens, focus states) or reliably kept in sync with RTL, so this mirrors
+   the standard listbox pattern (button + role="listbox", roving focus, Esc/outside-click to
+   close) while staying keyboard- and screen-reader-navigable. */
+(() => {
+  const wrap = $("langSel"), btn = $("langSelBtn"), list = $("langSelList");
+  if (!wrap || !btn || !list) return;
+  const opts = () => Array.from(list.querySelectorAll(".langsel-opt"));
+  function closeList(){
+    if (list.hidden) return;
+    list.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+  }
+  function openList(){
+    list.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    const items = opts();
+    (items.find(o => o.getAttribute("aria-selected") === "true") || items[0])?.focus();
+  }
+  on(btn, "click", () => { list.hidden ? openList() : closeList(); });
+  on(btn, "keydown", (e) => {
+    if ((e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") && list.hidden){
+      e.preventDefault(); openList();
+    }
+  });
+  opts().forEach(o => on(o, "click", () => { applyLanguage(o.dataset.value); closeList(); btn.focus(); }));
+  on(list, "keydown", (e) => {
+    const items = opts();
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown"){ e.preventDefault(); (items[i+1] || items[0]).focus(); }
+    else if (e.key === "ArrowUp"){ e.preventDefault(); (items[i-1] || items[items.length-1]).focus(); }
+    else if (e.key === "Enter" || e.key === " "){ e.preventDefault(); document.activeElement.click(); }
+    else if (e.key === "Escape"){ closeList(); btn.focus(); }
+    else if (e.key === "Tab"){ closeList(); }
+  });
+  on(document, "click", (e) => { if (!wrap.contains(e.target)) closeList(); });
+})();
 
 /* ============================================================
    Confetti - ported verbatim from find-it-site/index.html
@@ -2692,11 +3143,549 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ============================================================
+   Multiplayer rooms (§11-§17) - Worker + Durable Object client. Mirrors find-it-site's MP
+   pattern (permanent per-device player id, API_BASE + /api/rooms, a WebSocket per room) with
+   the additions Answer It's game needs on top: a clock-offset ping/pong handshake so every
+   player's countdown reads the same wall-clock moment (§17), and a lot more phases (judging,
+   teams, spectators) than Find It's plain waiting/playing/finished.
+
+   Scoring, level mix, streak multiplier etc. are never computed here - the server (room.js,
+   sharing game-core.js with solo) is the sole source of truth; this code only renders whatever
+   the DO sends and forwards taps/keystrokes back to it.
+   ============================================================ */
+const ROOM_API_BASE = "https://answer-it-api.nizarh393.workers.dev";
+const ROOM_API_BASE_KEY = "answerit_room_endpoint";
+function roomApiBase(){
+  try { return localStorage.getItem(ROOM_API_BASE_KEY) || ROOM_API_BASE; } catch { return ROOM_API_BASE; }
+}
+
+const RM_ID_KEY = "answerit_player";
+function rmLoadIdentity(){
+  let me = null;
+  try { me = JSON.parse(localStorage.getItem(RM_ID_KEY)); } catch {}
+  if (!me || !me.id) me = { id: crypto.randomUUID ? crypto.randomUUID() : "p-"+Date.now()+"-"+Math.random().toString(36).slice(2), nickname:"" };
+  return me;
+}
+function rmSaveIdentity(){ try { localStorage.setItem(RM_ID_KEY, JSON.stringify(RM.me)); } catch {} }
+
+const RM = {
+  me: rmLoadIdentity(), ws:null, code:null, reconnecting:false, leavingIntentionally:false,
+  state:null, question:null, clockOffset:0, minRtt:Infinity, pingTimer:null,
+  timerHandle:null, spectatorJoin:false,
+};
+
+function rmSend(msg){ if (RM.ws && RM.ws.readyState===1) RM.ws.send(JSON.stringify(msg)); }
+function rmIsHost(){ return !!RM.state && RM.state.hostId===RM.me.id; }
+function rmMyRole(){ return RM.state?.you?.role || "player"; }
+
+/* ---------------- entry screen ---------------- */
+function rmBuildCodeInputs(){
+  const el = $("roomJoinInputs");
+  el.innerHTML = "";
+  for (let i=0;i<6;i++){
+    const inp = document.createElement("input");
+    inp.maxLength = 1; inp.inputMode = "numeric"; inp.autocomplete = "off";
+    on(inp, "input", () => {
+      inp.value = /^[0-9]$/.test(inp.value) ? inp.value : "";
+      if (inp.value && i<5) el.children[i+1].focus();
+    });
+    on(inp, "keydown", e => {
+      if (e.key==="Backspace" && !inp.value && i>0) el.children[i-1].focus();
+      else if (e.key==="Enter") $("roomJoinBtn").click();
+    });
+    on(inp, "paste", e => {
+      e.preventDefault();
+      const clean = (e.clipboardData.getData("text")||"").replace(/\D/g,"");
+      for (let k=0; k+i<6 && k<clean.length; k++) el.children[i+k].value = clean[k];
+      el.children[Math.min(5,i+clean.length)].focus();
+    });
+    el.appendChild(inp);
+  }
+}
+function rmReadCode(){ return [...$("roomJoinInputs").children].map(i=>i.value).join(""); }
+function rmNameMsg(msg){ const el=$("roomNameMsg"); el.textContent=msg; el.classList.toggle("hide", !msg); }
+function rmEntryMsg(msg){ const el=$("roomEntryMsg"); el.textContent=msg; el.classList.toggle("hide", !msg); }
+
+// Two screens, mirroring find-it-site's mpAuth -> mpHome: pick a name once (skipped on repeat
+// visits, same as MP.me.nickname there), then a single "create or join" panel every time after.
+on($("menuRooms"), "click", () => {
+  if (RM.me.nickname) return rmShowHome();
+  $("roomNickInput").value = "";
+  rmNameMsg("");
+  show("screen-room-name");
+});
+on($("roomNameBack"), "click", () => show("screen-menu"));
+on($("roomHomeBack"), "click", () => show("screen-menu"));
+on($("roomEditNameBtn"), "click", () => {
+  $("roomNickInput").value = RM.me.nickname;
+  rmNameMsg("");
+  show("screen-room-name");
+});
+function rmShowHome(){
+  $("roomHomeName").textContent = RM.me.nickname;
+  rmBuildCodeInputs();
+  rmEntryMsg("");
+  show("screen-room-home");
+}
+function rmSubmitName(){
+  const nick = $("roomNickInput").value.trim();
+  if (!nick){ rmNameMsg(t("enterNickname")); return; }
+  RM.me.nickname = nick.slice(0,24);
+  rmSaveIdentity();
+  rmShowHome();
+}
+on($("roomNameContinueBtn"), "click", rmSubmitName);
+on($("roomNickInput"), "keydown", e => { if (e.key==="Enter") rmSubmitName(); });
+
+async function rmCreate(){
+  rmEntryMsg("");
+  $("roomCreateBtn").disabled = true;
+  try {
+    const res = await fetch(roomApiBase()+"/api/rooms", {
+      method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({ hostId: RM.me.id, hostName: RM.me.nickname }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "failed");
+    rmConnect(data.code, { spectator:false });
+  } catch {
+    rmEntryMsg(t("couldntReachServer"));
+  } finally {
+    $("roomCreateBtn").disabled = false;
+  }
+}
+function rmJoin(){
+  const code = rmReadCode();
+  if (code.length!==6){ rmEntryMsg(t("enterCode")); return; }
+  rmEntryMsg("");
+  rmConnect(code, { spectator:false });
+}
+on($("roomCreateBtn"), "click", rmCreate);
+on($("roomJoinBtn"), "click", rmJoin);
+on($("roomBigscreenBtn"), "click", () => {
+  const code = rmReadCode();
+  if (code.length!==6){ rmEntryMsg(t("enterCode")); return; }
+  if (!RM.me.nickname) { RM.me.nickname = "Big screen"; rmSaveIdentity(); }
+  rmEntryMsg("");
+  rmConnect(code, { spectator:true });
+});
+
+/* ---------------- connection ---------------- */
+function rmConnect(code, { spectator=false } = {}){
+  RM.code = code; RM.spectatorJoin = spectator; RM.leavingIntentionally = false;
+  RM.clockOffset = 0; RM.minRtt = Infinity;
+  if (RM.ws){ try { RM.ws.close(); } catch {} }
+  let url = roomApiBase().replace(/^http/,"ws") + `/api/rooms/${code}/socket?playerId=${encodeURIComponent(RM.me.id)}&nickname=${encodeURIComponent(RM.me.nickname)}`;
+  if (spectator) url += "&role=spectator";
+  const ws = new WebSocket(url);
+  RM.ws = ws;
+  ws.addEventListener("message", ev => {
+    let data; try { data = JSON.parse(ev.data); } catch { return; }
+    rmOnMessage(data);
+  });
+  ws.addEventListener("open", () => { clearInterval(RM.pingTimer); rmPing(); RM.pingTimer = setInterval(rmPing, 4000); });
+  ws.addEventListener("close", () => {
+    clearInterval(RM.pingTimer);
+    if (RM.ws!==ws) return;
+    if (RM.leavingIntentionally){ RM.ws=null; return; }
+    if (!RM.state){
+      RM.code=null; RM.ws=null;
+      rmClearActiveCode();
+      rmShowHome();
+      rmEntryMsg(t("couldntJoinRoom"));
+      return;
+    }
+    if (RM.code && !RM.reconnecting){
+      RM.reconnecting = true;
+      setTimeout(() => { RM.reconnecting=false; if (RM.code) rmConnect(RM.code, { spectator: RM.spectatorJoin }); }, 1500);
+    }
+  });
+  ws.addEventListener("error", () => {});
+}
+function rmPing(){
+  const t0 = Date.now(), p0 = performance.now();
+  RM._pingT0 = t0; RM._pingP0 = p0;
+  rmSend({ type:"ping", t:t0 });
+}
+function rmLeaveRoom(){
+  RM.leavingIntentionally = true;
+  rmSend({ type:"leave" });
+  if (RM.ws){ try { RM.ws.close(); } catch {} }
+  RM.ws=null; RM.code=null; RM.state=null; RM.question=null;
+  clearInterval(RM.pingTimer);
+  clearInterval(RM.timerHandle);
+  document.body.classList.remove("spectating");
+  rmClearActiveCode();
+  show("screen-menu");
+}
+
+function rmOnMessage(data){
+  switch (data.type){
+    case "pong": {
+      const rtt = performance.now() - RM._pingP0;
+      if (rtt < RM.minRtt){ RM.minRtt = rtt; RM.clockOffset = data.serverNow - (RM._pingT0 + rtt/2); }
+      return;
+    }
+    case "state": return rmOnState(data);
+    case "question": return rmOnQuestion(data);
+    case "answered": return rmOnAnswered(data);
+    case "lock": return rmOnLock(data);
+    case "judging": return rmOnJudging(data);
+    case "reveal": return rmOnReveal(data);
+    case "mixShift": return toast(data.direction==="up" ? t("mixShiftUp") : t("mixShiftDown"));
+    case "final": return rmOnFinal(data);
+    case "notice": return (data.notices||[]).forEach(n => toast(noticeText(n)));
+    case "error": return rmEntryMsg(data.message || data.code || "Error");
+  }
+}
+/* ---------------- lobby ---------------- */
+function rmOnState(data){
+  const wasHostBefore = RM.state ? rmIsHost() : null;
+  RM.state = data;
+  rmSaveActiveCode(); // first `state` after a successful connect - safe to remember for auto-rejoin on reload
+
+  if (data.status==="lobby"){
+    rmRenderLobby();
+    if (rmActiveScreenId()!=="screen-lobby") show("screen-lobby", { silent:true });
+  } else if (data.status==="finished"){
+    // `final` (sent once, right when the round ends) carries the actual podium data; a bare
+    // `state` snapshot alone (e.g. a reconnect that landed after the round already ended) has
+    // nothing richer to show, so just make sure we're not stuck on a stale mid-round screen.
+    if (rmActiveScreenId()!=="screen-room-podium") show("screen-room-podium");
+  } else if (data.status==="playing"){
+    document.body.classList.toggle("spectating", data.you?.role==="spectator" || data.you?.isJudge);
+    // Reconnecting straight into a live question/judging phase is handled by handleSocket also
+    // resending the dedicated `question`/`judging` message (see rmOnQuestion/rmOnJudging) - this
+    // branch only covers the plain `state`-only phases (locked, or a reveal we reconnected into,
+    // for which there is no cached payload to rebuild - the next question's `question` message
+    // will resync it).
+  }
+  if (wasHostBefore===false && rmIsHost()) toast(t("hostLeftPromoted"));
+}
+const RM_CODE_KEY = "answerit_room_code";
+function rmSaveActiveCode(){ try { localStorage.setItem(RM_CODE_KEY, RM.code); } catch {} }
+function rmClearActiveCode(){ try { localStorage.removeItem(RM_CODE_KEY); } catch {} }
+function rmActiveScreenId(){ return document.querySelector(".screen.active")?.id; }
+
+function rmRenderLobby(){
+  const s = RM.state; if (!s) return;
+  $("lobbyCode").textContent = s.code || RM.code;
+  $("lobbyPlayers").innerHTML = Object.values(s.players).map(p => `
+    <div class="prow ${p.connected?"":"offline"} ${p.id===RM.me.id?"me":""}">
+      ${s.teams[p.teamId] ? `<span class="teamdot" style="background:${s.teams[p.teamId].color}"></span>` : ""}
+      <span class="pname">${esc(p.nickname)}</span>
+      ${p.id===s.hostId ? `<span class="badge host">${esc(t("roleHost"))}</span>` : ""}
+      ${p.role==="spectator" ? `<span class="badge">${esc(t("roleSpectator"))}</span>` : ""}
+      ${!p.connected ? `<span class="badge">${esc(t("roleOffline"))}</span>` : ""}
+      ${rmIsHost() && p.id!==RM.me.id ? `<button class="iconbtn" style="width:30px;height:30px" data-kick="${esc(p.id)}" title="${esc(t("kickBtn"))}">${icon("x")}</button>` : ""}
+    </div>`).join("");
+  $("lobbyPlayers").querySelectorAll("[data-kick]").forEach(b => on(b,"click",() => rmSend({type:"kick", playerId:b.dataset.kick})));
+
+  const teamIds = Object.keys(s.teams);
+  $("lobbyTeamsCard").classList.toggle("hide", !teamIds.length || rmMyRole()!=="player");
+  $("lobbyTeamGrid").innerHTML = teamIds.map(id => `
+    <button type="button" class="teamchip ${s.you?.teamId===id?"on":""}" data-team="${id}">
+      <span class="teamdot" style="background:${s.teams[id].color}"></span>${esc(s.teams[id].name)}
+    </button>`).join("");
+  $("lobbyTeamGrid").querySelectorAll("[data-team]").forEach(b => on(b,"click",() => rmSend({type:"team", teamId:b.dataset.team})));
+
+  const isHost = rmIsHost();
+  $("lobbySettingsHost").classList.toggle("hide", !isHost);
+  $("lobbySettingsGuest").classList.toggle("hide", isHost);
+  $("lobbyStartBtn").classList.toggle("hide", !isHost);
+  if (isHost) rmRenderLobbySettings(s.settings, s.mix);
+
+  const msg = $("lobbyMsg");
+  const noCats = isHost && (!s.settings.categories || !s.settings.categories.length);
+  msg.textContent = noCats ? t("pickCategoryWarning") : "";
+  msg.classList.toggle("hide", !noCats);
+  $("lobbyStartBtn").disabled = noCats;
+  $("lobbyStartBtn").innerHTML = `${icon("play")} <span>${esc(t("startRace"))}</span>`;
+}
+
+let rmCatGridBuilt = false;
+function rmRenderLobbySettings(settings, mix){
+  if (!rmCatGridBuilt){
+    $("lobbyCatGrid").innerHTML = CATEGORIES.map(c => `
+      <button type="button" class="cattile" data-c="${c.key}">${icon(c.icon)}<span>${esc(catLabel(c.key))}</span></button>`).join("");
+    $("lobbyCatGrid").querySelectorAll("[data-c]").forEach(b => on(b,"click",() => {
+      const cur = new Set((RM.state.settings.categories||[]).filter(c=>c!=="mix"));
+      if (cur.has(b.dataset.c)) cur.delete(b.dataset.c); else cur.add(b.dataset.c);
+      rmSend({ type:"configure", categories: cur.size ? [...cur] : [] });
+    }));
+    rmCatGridBuilt = true;
+  }
+  const active = new Set(settings.categories.includes("mix") ? CATEGORY_KEYS : settings.categories);
+  $("lobbyCatGrid").querySelectorAll("[data-c]").forEach(b => b.classList.toggle("on", active.has(b.dataset.c)));
+
+  const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"]];
+  for (const [id,field] of segs){
+    $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", String(b.dataset.v)===String(settings[field])));
+  }
+  $("lobbyToggleStreaks").checked = settings.streaks;
+  $("lobbyToggleJudgeOnly").checked = !!RM.state.judgeOnlyHost;
+  $("lobbyMixBar").innerHTML = LEVELS.map(L => `<div style="width:${(mix[L]||0)/settings.n*100}%;background:var(${LEVEL_COLOR_VAR[L]})"></div>`).join("");
+}
+function rmWireLobbySeg(id, field, parse){
+  $(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    rmSend({ type:"configure", [field]: parse ? parse(b.dataset.v) : b.dataset.v });
+  });
+}
+rmWireLobbySeg("lobbySegN","n",Number);
+rmWireLobbySeg("lobbySegStyle","style");
+rmWireLobbySeg("lobbySegIntensity","intensity");
+rmWireLobbySeg("lobbySegTeams","teams",Number);
+rmWireLobbySeg("lobbySegPace","revealPace");
+on($("lobbyToggleStreaks"), "change", () => rmSend({type:"configure", streaks:$("lobbyToggleStreaks").checked}));
+on($("lobbyToggleJudgeOnly"), "change", () => rmSend({type:"configure", judgeOnlyHost:$("lobbyToggleJudgeOnly").checked}));
+on($("lobbyStartBtn"), "click", () => rmSend({type:"start"}));
+on($("lobbyLeave"), "click", rmLeaveRoom);
+on($("lobbyCode"), "click", () => {
+  const code = $("lobbyCode").textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(code).then(()=>toast(t("tapToCopy")+" ✓")).catch(()=>{});
+});
+
+/* ---------------- question ---------------- */
+function rmOnQuestion(data){
+  RM.question = data;
+  clearInterval(RM.timerHandle);
+  const localStartAt = data.startAt - RM.clockOffset;
+  const delay = Math.max(0, localStartAt - Date.now());
+  if (data.level==="hell"){
+    const mod = data.modifiers?.[0];
+    $("hellSub").textContent = mod==="rush" ? t("hellRush", Math.round((data.endsAt-data.startAt)/1000))
+      : mod==="blind" ? t("hellBlind") : t("hellBasePoints");
+    $("hellCard").classList.remove("hide");
+    setTimeout(() => { $("hellCard").classList.add("hide"); rmShowQuestionNow(data); }, delay);
+  } else if (data.isDouble){
+    $("dblSub").textContent = t("doubleSub", (rmMyScore()||0).toLocaleString());
+    $("dblCard").classList.remove("hide");
+    setTimeout(() => { $("dblCard").classList.add("hide"); rmShowQuestionNow(data); }, delay);
+  } else {
+    setTimeout(() => rmShowQuestionNow(data), delay);
+  }
+}
+function rmMyScore(){ return RM.state?.players?.find(p=>p.id===RM.me.id)?.score; }
+
+function rmShowQuestionNow(q){
+  show("screen-room-question");
+  const isSpectator = rmMyRole()==="spectator";
+  const isJudge = rmMyRole()==="judge";
+  document.body.classList.toggle("spectating", isSpectator || isJudge);
+  const chip = $("rqLevelChip");
+  chip.textContent = levelName(q.level) + (q.isDouble ? " ×2" : "");
+  chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
+  $("rqCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("rqProgress").textContent = q.isDouble ? t("theDouble") : t("questionOf", q.qIndex+1, q.total);
+  $("rqText").textContent = q.text;
+  $("rqAnswered").textContent = "";
+  $("rqSpectatorNote").classList.toggle("hide", !(isSpectator || isJudge));
+  $("rqLockedNote").classList.add("hide");
+
+  const me = RM.state.players.find(p=>p.id===RM.me.id);
+  const pill = $("rqStreakPill");
+  if (RM.state.settings.streaks && me?.streak>0){
+    pill.classList.remove("hide"); $("rqStreakVal").textContent = me.streak;
+    $("rqStreakMult").textContent = "×"+streakMultiplier(me.streak).toFixed(1);
+  } else pill.classList.add("hide");
+
+  const optGrid = $("rqOptions"), openRow = $("rqOpenRow");
+  if (isSpectator || isJudge){
+    optGrid.classList.add("hide"); openRow.classList.add("hide");
+  } else if (q.qType==="choice"){
+    optGrid.classList.remove("hide"); openRow.classList.add("hide");
+    const shapes=["tri","dia","cir","sq"], colors=["--shape-a","--shape-b","--shape-c","--shape-d"];
+    optGrid.innerHTML = q.options.map((opt,i) => `
+      <button type="button" class="opt" data-i="${i}" style="--opt-color:var(${colors[i%4]})">
+        <span class="opt-shape ${shapes[i%4]}"></span><span class="opt-key">${i+1}</span>
+        <span class="opt-text">${esc(opt)}</span></button>`).join("");
+    optGrid.querySelectorAll(".opt").forEach(b => on(b,"click",() => rmSubmit(Number(b.dataset.i))));
+  } else {
+    optGrid.classList.add("hide"); openRow.classList.remove("hide");
+    const input = $("rqOpenInput"); input.value=""; input.disabled=false; $("rqOpenSubmit").disabled=false; input.focus();
+  }
+
+  const seconds = Math.round((q.endsAt-q.startAt)/1000);
+  rmStartTimer(q.endsAt, seconds, q.level);
+}
+function rmStartTimer(endsAtServer, seconds, level){
+  const fill = $("rqTimerFill");
+  fill.style.transition="none"; fill.style.transform="scaleX(1)"; fill.style.background=`var(${LEVEL_COLOR_VAR[level]})`;
+  void fill.offsetWidth;
+  if (!reduceMotion) requestAnimationFrame(() => { fill.style.transition = `transform ${seconds}s linear`; fill.style.transform="scaleX(0)"; });
+  const localEndsAt = endsAtServer - RM.clockOffset;
+  clearInterval(RM.timerHandle);
+  RM.timerHandle = setInterval(() => {
+    const left = Math.max(0, localEndsAt - Date.now());
+    const s = Math.ceil(left/1000);
+    $("rqTimerLabel").textContent = s;
+    if (reduceMotion) fill.style.transform = `scaleX(${left/(seconds*1000)})`;
+    if (left<=0) clearInterval(RM.timerHandle);
+  }, 100);
+}
+function rmLockInputsUi(){
+  $("rqOptions").querySelectorAll(".opt").forEach(b=>b.disabled=true);
+  $("rqOpenInput").disabled = true; $("rqOpenSubmit").disabled = true;
+  $("rqLockedNote").classList.remove("hide");
+}
+function rmSubmit(value){
+  if (!RM.question) return;
+  rmSend({ type:"answer", qIndex: RM.question.qIndex, value });
+  rmLockInputsUi();
+}
+on($("rqOpenSubmit"), "click", () => { const v=$("rqOpenInput").value.trim(); if (v) rmSubmit(v); });
+on($("rqOpenInput"), "keydown", e => { if (e.key==="Enter"){ const v=$("rqOpenInput").value.trim(); if (v) rmSubmit(v); } });
+
+function rmOnAnswered(data){ $("rqAnswered").textContent = t("answeredOf", data.count, data.total); }
+function rmOnLock(){ rmLockInputsUi(); $("rqLockedNote").innerHTML = `${icon("hourglass")} <span>${esc(t("lockedWaiting"))}</span>`; }
+
+/* ---------------- judging (host only) ---------------- */
+function rmOnJudging(data){
+  RM._judging = data;
+  $("judgeAnswer").textContent = data.correctAnswer;
+  $("judgeAutoNote").textContent = t("judgeAutoApproved", data.auto.length);
+  $("judgeDisputes").innerHTML = data.disputes.map(d => `
+    <div class="judgerow" data-player="${esc(d.playerId)}">
+      <div><div class="jname">${esc(d.nickname)}</div><div class="jtext">"${esc(d.text)}"</div></div>
+      <div class="judge-actions">
+        <button type="button" class="yes" data-v="1" title="correct">${icon("check")}</button>
+        <button type="button" class="no" data-v="0" title="wrong">${icon("x")}</button>
+      </div>
+    </div>`).join("") || `<p style="color:var(--muted);font-size:13px">${esc(t("nobodyGotIt"))}</p>`;
+  const verdicts = {};
+  $("judgeDisputes").querySelectorAll(".judgerow").forEach(row => {
+    const pid = row.dataset.player;
+    row.querySelectorAll("button").forEach(btn => on(btn, "click", () => {
+      verdicts[pid] = btn.dataset.v==="1";
+      row.querySelectorAll("button").forEach(b=>b.classList.remove("picked"));
+      btn.classList.add("picked");
+    }));
+  });
+  RM._judgeVerdicts = verdicts;
+  // Even a non-judge-host client can receive this if it targeted the wrong socket somehow;
+  // guard so only the actual judge sees the panel navigate them there.
+  if (RM.state?.you?.isJudge) show("screen-room-judge");
+}
+on($("judgeDoneBtn"), "click", () => {
+  rmSend({ type:"judge", qIndex: RM._judging?.qIndex, verdicts: RM._judgeVerdicts||{} });
+});
+
+/* ---------------- reveal ---------------- */
+function rmOnReveal(data){
+  clearInterval(RM.timerHandle);
+  const q = RM.question;
+  show("screen-room-reveal");
+  const chip = $("rrLevelChip");
+  chip.textContent = q ? levelName(q.level) + (q.isDouble?" ×2":"") : "";
+  if (q) chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
+  if (q) $("rrCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("rrAnswer").textContent = data.correctAnswer;
+  $("rrDisputeNote").classList.toggle("hide", !data.disputeAutoResolved);
+  $("rrNobodyNote").classList.toggle("hide", !data.nobodyGotIt);
+
+  const distEl = $("rrDistribution");
+  if (q && q.qType==="choice"){
+    const total = data.distribution.reduce((a,b)=>a+b,0) || 1;
+    const colors=["--shape-a","--shape-b","--shape-c","--shape-d"];
+    distEl.innerHTML = q.options.map((opt,i) => `
+      <div class="dist-row"><span style="width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(opt)}</span>
+        <div class="dist-bar"><div style="width:${data.distribution[i]/total*100}%;background:var(${colors[i%4]})"></div></div>
+        <span class="dist-n">${data.distribution[i]}</span></div>`).join("");
+  } else if (Array.isArray(data.distribution)){
+    distEl.innerHTML = `<div class="openword">${data.distribution.map(a => `<span class="${a.correct?"correct":""}">${esc(a.text||t("noAnswer"))}</span>`).join("") || ""}</div>`;
+  } else distEl.innerHTML = "";
+
+  const mine = data.results.find(r=>r.playerId===RM.me.id);
+  const wrap = $("rrMyResultWrap");
+  wrap.classList.toggle("hide", !mine);
+  if (mine){
+    $("rrMark").innerHTML = icon(mine.correct?"check":"x");
+    $("rrMark").className = "mark " + (mine.correct?"ok":"no");
+    $("rrPoints").textContent = (mine.correct?"+":"") + mine.points.toLocaleString();
+    $("rrTime").textContent = mine.ms!=null ? fmtMs(mine.ms) : "-";
+    $("rrStreak").textContent = mine.streak;
+    const mult = mine.correct ? streakMultiplier(mine.streak) : 1;
+    $("rrMultWrap").classList.toggle("hide", !mine.correct || mult<=1);
+    $("rrMult").textContent = mult.toFixed(1);
+  }
+
+  $("rrLeaderboard").innerHTML = data.results
+    .slice().sort((a,b)=>b.total-a.total)
+    .map((r,i) => {
+      const p = RM.state.players.find(pp=>pp.id===r.playerId);
+      return `<div class="lbrow"><span class="rank">${i+1}</span><span class="lbname">${esc(p?.nickname||"?")}</span><span class="lbscore">${r.total.toLocaleString()}</span></div>`;
+    }).join("");
+
+  const isHost = rmIsHost();
+  $("rrNextBtn").classList.toggle("hide", !isHost);
+  $("rrWaitingNote").classList.toggle("hide", isHost);
+}
+on($("rrNextBtn"), "click", () => rmSend({type:"next"}));
+
+/* ---------------- podium ---------------- */
+function rmOnFinal(data){
+  document.body.classList.remove("spectating");
+  show("screen-room-podium");
+  $("rpTeamsCard").classList.toggle("hide", !data.teams);
+  if (data.teams){
+    $("rpTeams").innerHTML = data.teams.map((tm,i) => `
+      <div class="lbrow"><span class="rank">${i+1}</span><span class="teamdot" style="background:${tm.color}"></span>
+        <span class="lbname">${esc(tm.name)}</span><span class="lbscore">${tm.score.toLocaleString()}</span></div>`).join("");
+  }
+  $("rpStandings").innerHTML = data.podium.map(p => `
+    <div class="lbrow"><span class="rank">${p.rank}</span><span class="lbname">${esc(p.nickname)}${p.wins?` <span class="badge">${p.wins}🏆</span>`:""}</span><span class="lbscore">${p.score.toLocaleString()}</span></div>`).join("");
+
+  const mine = data.podium.find(p=>p.id===RM.me.id);
+  const cats = mine?.byCategory || {};
+  $("rpCatBreakdown").innerHTML = Object.entries(cats).map(([key,s]) => `
+    <div class="catrow"><div class="name">${icon(CAT_BY_KEY[key].icon)} ${catLabel(key)}</div>
+      <div class="bar"><div style="width:${s.n?Math.round(s.c/s.n*100):0}%"></div></div>
+      <div class="frac">${s.c}/${s.n}</div></div>`).join("") || `<p style="color:var(--muted);font-size:13px">${esc(t("noQuestionsAnswered"))}</p>`;
+
+  const isHost = rmIsHost();
+  $("rpHostControls").classList.toggle("hide", !isHost);
+  $("rpGuestNote").classList.toggle("hide", isHost);
+  if (data.ranOut) toast(noticeText({key:data.ranOut}));
+  confetti.burst();
+}
+on($("rpRematch"), "click", () => rmSend({type:"rematch"}));
+on($("rpSettings"), "click", () => { rmRenderLobby(); show("screen-lobby"); });
+on($("rpLeave"), "click", rmLeaveRoom);
+
+// §19 keyboard parity with solo's own handler (line ~3092): 1-4 pick an option, Enter/Space
+// submits the open-answer field or advances the reveal (host only - a guest's Enter shouldn't
+// silently no-op-send anything, and rmSend already drops a `next` from a non-host server-side,
+// but keeping the keybinding host-only avoids the disabled button flashing for everyone else).
+document.addEventListener("keydown", (e) => {
+  if ($("screen-room-question").classList.contains("active") && rmMyRole()==="player"){
+    if (["1","2","3","4"].includes(e.key) && !$("rqOptions").classList.contains("hide")){
+      const btn = $("rqOptions").querySelector(`[data-i="${Number(e.key)-1}"]`);
+      if (btn && !btn.disabled) rmSubmit(Number(e.key)-1);
+    }
+  }
+  if ($("screen-room-reveal").classList.contains("active") && rmIsHost() && (e.key==="Enter"||e.key===" ")){
+    e.preventDefault(); rmSend({type:"next"});
+  }
+});
+
+/* ============================================================
    Boot
    ============================================================ */
 mountIcons();
 applyLanguage(lang); // also runs renderCatGrid() + refreshSetup(), which boot needs anyway
 show("screen-menu");
+
+// Rejoin a room that was still open when the page was last closed/refreshed (§17 reconnects) -
+// the player id is permanent (RM_ID_KEY) so the Durable Object recognises us and hands back our
+// existing score/streak/position. Silent: if the room is long gone, rmConnect's own "couldn't
+// join" path quietly lands back on the entry screen instead of the menu, which is an acceptable
+// surprise given the alternative (guessing wrong and stranding a mid-round player on reload).
+(() => {
+  let savedCode = null;
+  try { savedCode = localStorage.getItem(RM_CODE_KEY); } catch {}
+  if (savedCode && /^\d{6}$/.test(savedCode) && RM.me.nickname) rmConnect(savedCode, { spectator:false });
+})();
 
 // PWA install support. serviceWorker is undefined on file:// (no origin to scope to) - the
 // site already plays fine there, this just skips silently instead of throwing.

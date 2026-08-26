@@ -68,15 +68,21 @@ translated or the original English form.
 
 ## Status
 
-**v1 shipped (this session):** solo mode is a complete, standalone game - build order slice 1
-from [ANSWER-IT.md](ANSWER-IT.md#21-build-order), plus solo-appropriate parts of slice 3 (open
+**v1 shipped:** solo mode is a complete, standalone game - build order slice 1 from
+[ANSWER-IT.md](ANSWER-IT.md#21-build-order), plus solo-appropriate parts of slice 3 (open
 questions auto-judge in solo since there's no host to referee). Categories, levels, the
 automatic mix (including Adaptive), streaks, the Hell treatment and its modifiers, the Double,
 per-category stats, personal bests and awards are all live and playable today by opening
 [index.html](index.html) - no server required.
 
-**Not yet built:** multiplayer rooms (the Worker + Durable Object, slice 2), the KV question
-bank + cron top-up (slice 4), teams/spectators/big-screen mode (slice 6), and PWA packaging -
-manifest/service worker/icons (slice 7). `worker/src/game-core.js` and `worker/src/sources.js`
-already exist as the pure, dependency-free reference modules the Durable Object will import
-unchanged when rooms are built.
+**Rooms shipped:** multiplayer rooms (slice 2) are live - `worker/src/room.js` (one Durable
+Object per 6-digit code) plus `worker/src/bank.js` (round building) run the same
+`game-core.js`/`quality.js` the solo build already had. Lobby, synced choice + open questions,
+live leaderboard, the judge panel for open-answer disputes (judge-only-host toggle), teams with
+the sync bonus, spectators/big-screen mode, and rematch are all playable once the Worker in
+`worker/` is deployed - see [DEPLOY.md](DEPLOY.md). Solo play needs no server either way.
+
+**Not yet built:** the KV question bank + cron top-up (slice 4 - rooms currently fetch live on
+Start, same rate-limit caveat as solo, see ANSWER-IT.md §23.1), awards/per-question review on
+the room podium (parked, §22), and PWA packaging - manifest/service worker/icons (slice 7,
+solo already has these).

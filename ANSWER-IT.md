@@ -7,7 +7,10 @@
 > Where Find It asks *"can you crack the code?"*, Answer It asks *"do you know it —
 > and how fast?"*
 
-**Status:** design spec, v1. No code written yet.
+**Status:** design spec, v1. Build order slice 1 (solo) and slice 2 (rooms, plus the slice-3
+open-question judging and most of slice 5's feel layer) are built - see
+[PRODUCT.md](PRODUCT.md#status) for exactly what's live. This document still describes the full
+target design; treat it as the spec rooms were built against, not a backlog of unstarted work.
 **Sibling project:** [`find-it-site`](../find-it-site/) — Answer It reuses its stack,
 theming, PWA setup and multiplayer patterns.
 
