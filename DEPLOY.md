@@ -10,12 +10,12 @@ build, nothing to install, no server - it fetches questions directly from
 [The Trivia API](https://the-trivia-api.com/) and [Open Trivia Database](https://opentdb.com/)
 in the browser (both send permissive CORS headers, confirmed live before this shipped).
 
-There is now an **optional** Worker (`worker/`) that improves Arabic and French question
-translation. Deploying it is a separate, reversible step - see
-[Step 3](#step-3---optional-the-translation-worker). Skipping it costs you nothing except
-translation quality on the API-sourced questions; everything else works untouched.
-
-Multiplayer rooms still aren't built - see [PRODUCT.md](PRODUCT.md#status).
+There is a Worker (`worker/`) that does two things, independently: improves Arabic and French
+question translation, and runs multiplayer rooms (a Durable Object per 6-digit code). Deploying
+it is a separate, reversible step - see [Step 3](#step-3---the-worker-translation--rooms).
+Skipping it costs you the translation upgrade and means "Play with friends" can't actually reach
+a server (it fails with a readable "couldn't reach the game server" message rather than
+disappearing); solo play works fully untouched either way.
 
 ---
 
@@ -71,17 +71,15 @@ files**, then drag this folder in. No version history, but it works in about ten
 
 ---
 
-## Step 3 - optional: the translation Worker
+## Step 3 - the Worker: translation + rooms
 
-Skip this and the game still works. What it changes: the ~40% of each round that comes from the
-trivia APIs currently reaches Arabic and French players through MyMemory, which translates one
-string at a time with no idea what the question is about - so a bare option like "Mercury",
-"Bass" or "Turkey" gets whichever sense is commonest, not the right one. The Worker sends the
-whole question - category, text and every option - to Workers AI in a single prompt, so the
-context that disambiguates it is actually present.
+One Worker, two independent features - deploy it once and both come along:
 
-The curated core doesn't need any of this: `bank/curated-ar.js` and `bank/curated-fr.js` are
-hand-written and are always tier 0, deployed Worker or not.
+- **Translation** (optional, improves Arabic/French question quality - see below).
+- **Multiplayer rooms** (`POST /api/rooms`, `GET /api/rooms/:code/socket`) - a Durable Object
+  per 6-digit room code, per [ANSWER-IT.md §16](ANSWER-IT.md#16-architecture). This is what
+  "Play with friends" in the menu talks to; without it, that button still opens but Create/Join
+  fail with a readable error instead of reaching a server.
 
 ```bash
 cd worker
@@ -90,18 +88,26 @@ npx wrangler kv namespace create TRANSLATIONS   # paste the printed id into wran
 npx wrangler deploy
 ```
 
-Then put the resulting `https://answer-it-api.<your-subdomain>.workers.dev` into
-`TRANSLATE_ENDPOINT` near the "Tier 1" comment in `index.html`, and push. Leave it `""` and the
-tier is skipped entirely - no request, no delay. To test a deployed page against a local
-`wrangler dev` Worker without redeploying, set the override from the browser console instead:
+`wrangler deploy` provisions the Durable Object binding (`ROOMS`) automatically from
+`wrangler.toml` - the `new_sqlite_classes` migration is what keeps it on the **free** plan, same
+as find-it-site. Then put the resulting `https://answer-it-api.<your-subdomain>.workers.dev`
+into two places in `index.html`: `TRANSLATE_ENDPOINT` (near the "Tier 1" comment) and
+`ROOM_API_BASE` (near the "Multiplayer rooms" comment) - both point at the same Worker. Leave
+`TRANSLATE_ENDPOINT` `""` and that tier is skipped entirely, no request, no delay; rooms have no
+such opt-out since the button is always visible, but a missing/unreachable `ROOM_API_BASE` just
+fails Create/Join gracefully rather than breaking anything else.
+
+To test a deployed page against a local `wrangler dev` Worker without redeploying, override
+either endpoint from the browser console instead:
 
 ```js
 localStorage.setItem("answerit_translate_endpoint", "http://localhost:8787")
+localStorage.setItem("answerit_room_endpoint", "http://localhost:8787")
 ```
 
-`GET /api/health` reports whether the AI and KV bindings are actually bound.
+`GET /api/health` reports whether the AI, KV and Durable Object bindings are actually bound.
 
-### What it costs
+### What the translation tier costs
 
 Nothing, on the free tier, with real headroom - and you cannot be surprise-billed, because the
 Workers **Free** plan has no card on file: exceeding a daily allowance makes the call fail, and
@@ -118,17 +124,18 @@ Each question is translated **once, ever, for everybody** - the KV cache is what
 arithmetic work. English rounds cost nothing at all. If the KV write cap ever becomes a real
 constraint, move the cache into a SQLite-backed Durable Object (100,000 rows written/day free).
 
----
+### What rooms cost, and their one known limitation
 
-## Multiplayer backend - not built yet
-
-Rooms need a Durable Object per 6-digit room code, per
-[ANSWER-IT.md §16](ANSWER-IT.md#16-architecture). `worker/src/` now has `index.js`,
-`wrangler.toml` and `package.json` (from Step 3), but no `room.js` or `bank.js` yet. When they
-land, the pattern from
-[find-it-site's DEPLOY.md](../find-it-site/DEPLOY.md#multiplayer-backend) carries over directly
-(`env.ROOMS.idFromName(code)`, SQLite-backed storage for the free plan) - the commented-out
-binding block is already in `wrangler.toml` waiting for it.
+Also free at any plausible party-game scale: each room is one Durable Object, billed by wall
+time it's actually processing a message, plus the SQLite storage it holds (a room's state is a
+few KB). The part worth knowing about before a public launch: **rooms build their question round
+by fetching The Trivia API / OpenTDB live when the host presses Start** - the KV question bank
+described in [ANSWER-IT.md §6.2](ANSWER-IT.md#62-the-rate-limit-problem-and-the-answer) (build
+order slice 4) isn't built yet. OpenTDB's shared-IP rate limit (1 request/5s) is a per-Worker
+throttle here, not per-room, so two rooms starting in the same few seconds will make the second
+one's top-up wait rather than fail outright - fine for a few friends, worth fixing before
+advertising the game to strangers. Curated-core questions and The Trivia API (the primary
+source) aren't affected.
 
 ---
 

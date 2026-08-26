@@ -1,19 +1,18 @@
 /* ============================================================
    Answer It - Worker entry point
    ============================================================
-   Today this serves exactly one route, POST /api/translate (see translate.js): whole-question
-   translation on Workers AI, cached in KV. It is tier 1 of the client's translation chain and is
-   entirely optional - index.html ships with TRANSLATE_ENDPOINT empty and falls back to its
-   hand-written locale banks, then MyMemory, then English. Deploying this makes the API-sourced
-   ~40% of a round read properly in Arabic and French; not deploying it changes nothing else.
-
-   Multiplayer rooms (Durable Object per 6-digit code) are not built yet - see ANSWER-IT.md §16.
-   When they land they slot in beside the translate route, exactly as in find-it-site's worker.
+   Two independent features live here:
+     - POST /api/translate (translate.js): whole-question translation on Workers AI, cached in
+       KV. Tier 1 of the client's translation chain, entirely optional.
+     - /api/rooms* (room.js): multiplayer rooms, one Durable Object per 6-digit code, ported from
+       find-it-site's index.js/room.js pattern (ANSWER-IT.md §16).
 
    Deploy:  cd worker && npm install && npx wrangler kv namespace create TRANSLATIONS
             (paste the printed id into wrangler.toml) && npx wrangler deploy
    ============================================================ */
 import { translateBatch, parseRequest, MAX_BATCH } from "./translate.js";
+import { Room } from "./room.js";
+export { Room };
 
 // Left open (not pinned to https://answer-it.pages.dev) so the game still works from file://
 // and from Pages preview deployments (random *.answer-it.pages.dev subdomains per branch/PR).
@@ -36,10 +35,6 @@ export default {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return withCORS(new Response(null, { status: 204 }));
 
-    if (url.pathname === "/api/health") {
-      return withCORS(json({ ok: true, ai: !!env.AI, cache: !!env.TRANSLATIONS }));
-    }
-
     if (url.pathname === "/api/translate" && request.method === "POST") {
       if (!env.AI) return withCORS(json({ error: "no AI binding" }, 503));
       let body;
@@ -54,6 +49,44 @@ export default {
       return withCORS(json({ results, meta }));
     }
 
+    if (url.pathname === "/api/rooms" && request.method === "POST") {
+      if (!env.ROOMS) return withCORS(json({ error: "rooms are not enabled on this deployment" }, 503));
+      let body;
+      try { body = await request.json(); } catch { return withCORS(json({ error: "bad json" }, 400)); }
+      const { hostId, hostName } = body || {};
+      if (!hostId || !hostName) return withCORS(json({ error: "missing fields" }, 400));
+
+      // A handful of random codes; a 409 only happens if that exact 6-digit code already has a
+      // live-or-unfinished room, which is rare across a ~1M-code space (find-it-site's pattern).
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const code = makeCode();
+        const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+        const res = await stub.fetch("https://room/reserve", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ code, hostId, hostName }),
+        });
+        if (res.ok) return withCORS(json({ code }));
+      }
+      return withCORS(json({ error: "could not allocate a room code, try again" }, 503));
+    }
+
+    const m = url.pathname.match(/^\/api\/rooms\/(\d{6})\/socket$/);
+    if (m) {
+      if (!env.ROOMS) return new Response("rooms are not enabled on this deployment", { status: 503 });
+      const stub = env.ROOMS.get(env.ROOMS.idFromName(m[1]));
+      return stub.fetch(request); // 101 upgrade response passes straight through
+    }
+
+    if (url.pathname === "/api/health") {
+      return withCORS(json({ ok: true, ai: !!env.AI, cache: !!env.TRANSLATIONS, rooms: !!env.ROOMS }));
+    }
+
     return withCORS(json({ error: "not found" }, 404));
   },
 };
+
+// Plain 6-digit numeric code, e.g. "042817" - leading zeros allowed, always 6 chars.
+function makeCode() {
+  return String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+}

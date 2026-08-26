@@ -15,9 +15,11 @@ count, an intensity, and go. Four levels (easy/medium/hard/**hell**), streak mul
 
 ## Status
 
-Solo mode is fully playable today. Multiplayer rooms are designed (see
-[ANSWER-IT.md](ANSWER-IT.md)) but not built yet - see [PRODUCT.md](PRODUCT.md#status) for
-exactly what's live versus what's next.
+Solo mode is fully playable today, no server needed. Multiplayer rooms (lobby, teams,
+spectators/big-screen, the judge panel for open-answer disputes) are built too, behind the
+Worker in `worker/` - see [DEPLOY.md](DEPLOY.md) to deploy it and
+[PRODUCT.md](PRODUCT.md#status) for exactly what's live versus what's still ahead (the KV
+question bank is the main piece left, per [ANSWER-IT.md](ANSWER-IT.md)'s build order).
 
 ## Docs
 
@@ -30,10 +32,10 @@ exactly what's live versus what's next.
 
 No build step. `index.html` is the whole client (markup, CSS, JS). `worker/src/game-core.js`
 and `worker/src/sources.js` are pure, dependency-free reference modules - scoring, the level
-mix, round ordering, answer matching, and trivia-source adapters - that a future Durable Object
-will import unchanged. Solo mode mirrors the same logic inline in `index.html` rather than
-importing across files, so the page keeps working from a plain `file://` double-click with no
-server at all (the same reason Find It does this).
+mix, round ordering, answer matching, and trivia-source adapters - imported unchanged by
+`worker/src/room.js`, the Durable Object behind multiplayer rooms. Solo mode mirrors the same
+logic inline in `index.html` rather than importing across files, so the page keeps working from
+a plain `file://` double-click with no server at all (the same reason Find It does this).
 
 ## Credits
 

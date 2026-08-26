@@ -18,13 +18,12 @@ binding = "AI"
 binding = "TRANSLATIONS"
 id = "1374fa3273874250b5b3ff255e6727e5"
 
-# Multiplayer rooms are not built yet (ANSWER-IT.md §16). When they are, this is where the
-# Durable Object binding goes - SQLite-backed, which is what makes it work on the free plan:
-#
-# [[durable_objects.bindings]]
-# name = "ROOMS"
-# class_name = "Room"
-#
-# [[migrations]]
-# tag = "v1"
-# new_sqlite_classes = ["Room"]
+# Multiplayer rooms (ANSWER-IT.md §16). SQLite-backed Durable Object class, which is what makes
+# this work on the Workers Free plan (same pattern as find-it-site's wrangler.toml).
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
