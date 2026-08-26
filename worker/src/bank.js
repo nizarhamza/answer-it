@@ -154,14 +154,21 @@ export function initSessionState() {
   return { used: { easy: 0, medium: 0, hard: 0, hell: 0 }, rolling: [], lastCats: [], servedLevels: [] };
 }
 
+// Both branches anchor the target to the WHOLE round (n), not what's left, then subtract what's
+// already been used - that subtraction is what lets a level's share actually run out and hand
+// the turn to the next-largest one. The adaptive branch used to allocate over `remaining`
+// instead with no memory of `used` at all: since target[L] was recomputed from scratch every
+// question, "easy" (always the largest single share of any profile) kept winning the
+// eligible.reduce comparison in pickLevel() forever, except for the one-question detour
+// "medium" got from the no-3-in-a-row rule - hard and hell's shares never had a turn to be the
+// biggest remaining need. Recomputing the *profile* every question (rollingAccuracy can move it)
+// while anchoring the *target* to n is what actually makes "adaptive" mean "the mix shifts" and
+// not "some levels never get served".
 function levelBudget(pool, settings, state) {
   const n = settings.n;
-  if (settings.intensity !== "adaptive") {
-    const fixed = allocateCounts(n, PROFILES[settings.intensity]);
-    return LEVELS.reduce((acc, L) => { acc[L] = Math.max(0, fixed[L] - state.used[L]); return acc; }, {});
-  }
-  const remaining = n - state.servedLevels.length;
-  return allocateCounts(remaining, adaptiveProfile(rollingAccuracy(state.rolling)));
+  const profile = settings.intensity === "adaptive" ? adaptiveProfile(rollingAccuracy(state.rolling)) : PROFILES[settings.intensity];
+  const target = allocateCounts(n, profile);
+  return LEVELS.reduce((acc, L) => { acc[L] = Math.max(0, target[L] - state.used[L]); return acc; }, {});
 }
 
 function pickLevel(pool, settings, state, pos) {
