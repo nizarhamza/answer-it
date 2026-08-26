@@ -1936,7 +1936,7 @@ function localeBankTranslation(q){
 // Empty means the tier is skipped entirely - no request, no delay, no error. See worker/ and
 // DEPLOY.md. Everything still works without it; the API-sourced ~40% of a round just falls back
 // to MyMemory, exactly as it did before the Worker existed.
-const TRANSLATE_ENDPOINT = "";
+const TRANSLATE_ENDPOINT = "https://answer-it-api.nizarh393.workers.dev";
 // Runtime override, mostly so a deployed build can be pointed at a `wrangler dev` Worker without
 // a redeploy - in the browser console:
 //   localStorage.setItem("answerit_translate_endpoint", "http://localhost:8787")

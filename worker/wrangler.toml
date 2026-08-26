@@ -16,7 +16,7 @@ binding = "AI"
 # because the daily cap is spent is caught and ignored - the translation is still served.
 [[kv_namespaces]]
 binding = "TRANSLATIONS"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "1374fa3273874250b5b3ff255e6727e5"
 
 # Multiplayer rooms are not built yet (ANSWER-IT.md §16). When they are, this is where the
 # Durable Object binding goes - SQLite-backed, which is what makes it work on the free plan:

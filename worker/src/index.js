@@ -15,8 +15,8 @@
    ============================================================ */
 import { translateBatch, parseRequest, MAX_BATCH } from "./translate.js";
 
-// Tighten to your Pages URL once deployed, e.g. "https://answer-it.pages.dev". Left open so the
-// game still works from file:// and from preview deployments while you are testing.
+// Left open (not pinned to https://answer-it.pages.dev) so the game still works from file://
+// and from Pages preview deployments (random *.answer-it.pages.dev subdomains per branch/PR).
 const ALLOWED_ORIGIN = "*";
 
 function withCORS(resp) {
