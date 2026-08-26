@@ -18,6 +18,7 @@ import { gradeQuestion, loadCurated, dedupeKey } from "./quality.js";
 // for solo mode's <script src> tag and here, bundled straight into the Worker by wrangler/esbuild.
 import "../../bank/curated-core.js";
 import "../../bank/curated-extra.js";
+import "../../bank/curated-islamic.js";
 import {
   LEVELS, buildAccepted, allocateCounts, adaptiveProfile, rollingAccuracy,
   levelEligibleAt, pickHellQuestion, applyHellModifier, finalizeTimeLimit, doubleLevel,
@@ -40,19 +41,27 @@ function minPerBucket(n, categoryCount) {
 
 // Builds { [category]: { easy:[], medium:[], hard:[] } }, curated first, API on top, excluding
 // anything in `excludeKeys` (this room's seenQuestionIds, §6.2) so a rematch never repeats.
-export async function buildPool(categories, n, excludeKeys = new Set()) {
+// `region` ("any" or one of the curated bank's region tags) restricts the pool to that region's
+// curated rows and skips the API fetch below entirely - neither trivia source tags its questions
+// by region, so there is nothing there a region filter could ever apply to.
+export async function buildPool(categories, n, excludeKeys = new Set(), region = "any") {
+  const regionFilter = region && region !== "any" ? region : null;
   const minBucket = minPerBucket(n, categories.length);
   const pool = {};
   for (const c of categories) pool[c] = { easy: [], medium: [], hard: [] };
   const seen = new Set(excludeKeys);
 
   for (const c of categories) {
-    for (const q of loadCurated(buildAccepted, { category: c })) {
+    for (const q of loadCurated(buildAccepted, { category: c, region: regionFilter })) {
       const key = dedupeKey(q);
       if (!pool[c][q.level] || seen.has(key)) continue;
       seen.add(key);
       pool[c][q.level].push({ ...q, key, _score: CURATED_SCORE });
     }
+  }
+  if (regionFilter) {
+    for (const c of categories) for (const L of ["easy", "medium", "hard"]) pool[c][L].sort((a, b) => (b._score || 0) - (a._score || 0));
+    return pool;
   }
 
   function ingest(list, source, forcedCategory) {

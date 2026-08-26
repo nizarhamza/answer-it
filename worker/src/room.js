@@ -18,6 +18,7 @@ const JUDGING_TIMEOUT_MS = 90000; // same AFK-host principle applied to the judg
 const TEAM_NAMES = ["Red", "Blue", "Green", "Amber", "Purple", "Teal"];
 const TEAM_COLORS = ["#b91c1c", "#1d4ed8", "#15803d", "#a16207", "#7c3aed", "#0f766e"];
 const MAX_N = 30, MIN_N = 5;
+const REGIONS = ["any", "africa", "asia", "latam", "mena", "europe", "na"];
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
@@ -31,7 +32,7 @@ function newPlayer(id, nickname, role = "player") {
 }
 function defaultSettings() {
   return {
-    n: 15, categories: ["mix"], style: "mixed", intensity: "adaptive",
+    n: 15, categories: ["mix"], style: "mixed", intensity: "adaptive", region: "any",
     streaks: true, hellInsurance: false, extended: false, teams: 0, revealPace: "host",
   };
 }
@@ -230,6 +231,7 @@ export class Room {
       categories: Array.isArray(data.categories) && data.categories.length ? data.categories.slice(0, 10) : s.categories,
       style: ["choice", "open", "mixed"].includes(data.style) ? data.style : s.style,
       intensity: ["chill", "standard", "brutal", "adaptive"].includes(data.intensity) ? data.intensity : s.intensity,
+      region: REGIONS.includes(data.region) ? data.region : s.region,
       streaks: data.streaks !== undefined ? !!data.streaks : s.streaks,
       hellInsurance: data.hellInsurance !== undefined ? !!data.hellInsurance : s.hellInsurance,
       extended: data.extended !== undefined ? !!data.extended : s.extended,
@@ -312,7 +314,7 @@ export class Room {
     const categories = resolveCategories(room.settings.categories);
     let pool;
     try {
-      pool = await buildPool(categories, room.settings.n, new Set(room.seenQuestionIds));
+      pool = await buildPool(categories, room.settings.n, new Set(room.seenQuestionIds), room.settings.region);
     } catch {
       return this.sendTo(this.wsForPlayer(playerId)[0], { type: "error", code: "sources-unreachable", message: "Both trivia sources are unreachable right now. Try again in a moment." });
     }

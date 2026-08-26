@@ -18,11 +18,15 @@ export const CATEGORIES = [
   { key: "sport", label: "Sport" },
   { key: "arts", label: "Arts & Literature" },
   { key: "culture", label: "Society & Culture" },
+  { key: "islamic", label: "Islamic Knowledge" },
 ];
 export const CATEGORY_KEYS = CATEGORIES.map((c) => c.key);
 
 // The Trivia API v2 category keys per Answer It category. `games` has no category of its own
 // on Trivia API - it only exists as tags (queried separately, see TRIVIA_API_TAGS below).
+// `islamic` has no category or tag on either source - curated-only, same empty-mapping
+// treatment `games` gets for its own API-less slice (buildPool's `||[]` + length guards
+// already degrade gracefully for a category with nothing to fetch).
 export const TRIVIA_API_CATEGORIES = {
   general: ["general_knowledge"],
   science: ["science"],
@@ -34,10 +38,12 @@ export const TRIVIA_API_CATEGORIES = {
   sport: ["sport_and_leisure"],
   arts: ["arts_and_literature"],
   culture: ["society_and_culture", "food_and_drink"],
+  islamic: [],
 };
 export const TRIVIA_API_TAGS = { games: ["video_games", "board_games"] };
 
 // OpenTDB numeric category ids (opentdb.com/api_category.php) - one call per id, §6.1.
+// No `islamic` entry - OpenTDB has no matching category either.
 export const OPENTDB_CATEGORIES = {
   general: [9],
   science: [17, 18, 19, 30, 27],

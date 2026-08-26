@@ -319,10 +319,10 @@ export function normalizeCurated(row, buildAccepted, { asOpen = false } = {}) {
   };
 }
 
-export function loadCurated(buildAccepted, { category, level, asOpen = false } = {}) {
+export function loadCurated(buildAccepted, { category, level, region, asOpen = false } = {}) {
   const rows = globalThis.ANSWER_IT_CURATED || [];
   return rows
-    .filter((r) => (!category || r.c === category) && (!level || r.l === level))
+    .filter((r) => (!category || r.c === category) && (!level || r.l === level) && (!region || r.r === region))
     .map((r) => normalizeCurated(r, buildAccepted, { asOpen }));
 }
 
