@@ -346,6 +346,33 @@ p{margin:0}
 .lbrow.rank-bump{animation:rankbump .5s ease}
 @keyframes rankbump{0%{transform:scale(1)}30%{transform:scale(1.03)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.lbrow.rank-bump{animation:none}}
+
+/* Podium - top 3 revealed bottom-to-top with a pause between each (§9/§18: "podium reveals
+   bottom-to-top... confetti for first"). Each stand starts invisible/dropped and gets `.show`
+   added on its turn; the CSS transition is what makes that read as a rise rather than a snap. */
+.podium3{display:flex;align-items:flex-end;justify-content:center;gap:12px;min-height:210px;padding:0 4px}
+.pd-stand{
+  display:flex;flex-direction:column;align-items:center;gap:6px;width:100px;flex:none;
+  opacity:0;transform:translateY(28px) scale(.92);
+  transition:opacity .5s ease, transform .55s cubic-bezier(.34,1.56,.64,1);
+}
+.pd-stand.show{opacity:1;transform:translateY(0) scale(1)}
+.pd-stand[data-rank="1"]{order:2}
+.pd-stand[data-rank="2"]{order:1}
+.pd-stand[data-rank="3"]{order:3}
+.pd-name{font-weight:700;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.pd-score{font-family:"Fredoka";font-weight:600;font-size:15px;color:var(--muted)}
+.pd-block{
+  width:100%;border-radius:14px 14px 4px 4px;display:flex;align-items:flex-start;justify-content:center;
+  padding-top:10px;font-size:30px;box-shadow:0 10px 20px -12px rgba(0,0,0,.5);
+}
+.pd-stand[data-rank="1"] .pd-block{height:132px;background:linear-gradient(180deg,#fde047,#ca8a04)}
+.pd-stand[data-rank="2"] .pd-block{height:96px;background:linear-gradient(180deg,#e2e8f0,#94a3b8)}
+.pd-stand[data-rank="3"] .pd-block{height:68px;background:linear-gradient(180deg,#fbbf7d,#b45309)}
+.pd-stand[data-rank="1"] .pd-name{font-size:16px}
+@media (prefers-reduced-motion:reduce){.pd-stand{transition:none}}
+@media (max-width:420px){ .pd-stand{width:80px} .pd-name{font-size:12.5px} }
+
 .openword{display:flex;flex-wrap:wrap;gap:6px}
 .openword span{padding:5px 10px;border-radius:var(--pill);background:var(--raise);font-size:12.5px}
 .openword span.correct{background:var(--lvl-easy);color:#fff}
@@ -790,6 +817,8 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
   <section class="screen" id="screen-room-podium">
     <div class="wrap" style="gap:18px">
       <h2 style="text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><span data-i18n="roundComplete"></span> <span data-icon="flag"></span></h2>
+
+      <div class="podium3" id="rpPodium3"></div>
 
       <div class="card hide" id="rpTeamsCard">
         <div class="section-title" data-i18n="teamsTitle"></div>
@@ -3712,7 +3741,34 @@ function rmOnFinal(data){
   $("rpHostControls").classList.toggle("hide", !isHost);
   $("rpGuestNote").classList.toggle("hide", isHost);
   if (data.ranOut) toast(noticeText({key:data.ranOut}));
-  confetti.burst();
+
+  rmRevealPodium3(data.podium.filter(p=>p.rank<=3));
+}
+
+// §9/§18 - the podium reveals bottom-to-top with confetti on first. Stands are all rendered
+// up front (so layout/order never jumps) but start invisible via CSS; this just adds `.show` to
+// one at a time, 3rd -> 2nd -> 1st, each with its own little sting - full drama for 1st.
+const PODIUM_MEDALS = { 1:"🥇", 2:"🥈", 3:"🥉" };
+function rmRevealPodium3(top3){
+  const el = $("rpPodium3");
+  el.classList.toggle("hide", !top3.length);
+  if (!top3.length) { el.innerHTML = ""; return; }
+  el.innerHTML = top3.map(p => `
+    <div class="pd-stand" data-rank="${p.rank}">
+      <div class="pd-name">${esc(p.nickname)}</div>
+      <div class="pd-score">${p.score.toLocaleString()}</div>
+      <div class="pd-block">${PODIUM_MEDALS[p.rank] || p.rank}</div>
+    </div>`).join("");
+
+  const order = [3,2,1].filter(r => top3.some(p=>p.rank===r));
+  const revealOne = (rank) => {
+    const stand = el.querySelector(`[data-rank="${rank}"]`);
+    stand?.classList.add("show");
+    if (rank===1){ confetti.burst(); rmBeep(660,100); setTimeout(()=>rmBeep(990,220),110); }
+    else rmBeep(rank===2 ? 520 : 420, 130);
+  };
+  if (reduceMotion){ order.forEach(revealOne); return; }
+  order.forEach((rank, i) => setTimeout(() => revealOne(rank), 350 + i*750));
 }
 on($("rpRematch"), "click", () => rmSend({type:"rematch"}));
 on($("rpSettings"), "click", () => { rmRenderLobby(); show("screen-lobby"); });
