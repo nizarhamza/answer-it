@@ -333,10 +333,19 @@ p{margin:0}
 .lbrow .rank{width:22px;font-family:"Fredoka";font-weight:600;color:var(--muted);flex:none}
 .lbrow .lbname{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lbrow .lbscore{font-family:"Fredoka";font-weight:600}
-.dist-row{display:flex;align-items:center;gap:8px;font-size:13px}
-.dist-row .dist-bar{flex:1;height:20px;background:var(--sunk);border-radius:var(--radius-sm);overflow:hidden}
+.dist-list{display:flex;flex-direction:column;gap:12px}
+.dist-row{display:flex;align-items:center;gap:12px;font-size:14px}
+.dist-row .dist-label{width:auto;max-width:40%;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.dist-row .dist-bar{flex:1;height:28px;background:var(--sunk);border-radius:var(--radius-sm);overflow:hidden}
 .dist-row .dist-bar>div{height:100%;transition:width .4s ease}
-.dist-row .dist-n{width:26px;text-align:end;color:var(--muted)}
+.dist-row .dist-n{width:30px;text-align:end;color:var(--muted);font-weight:600;flex:none}
+.rank-arrow{display:inline-flex;flex:none;width:16px;height:16px}
+.rank-arrow.up{color:var(--lvl-medium)}
+.rank-arrow.down{color:var(--lvl-hell)}
+.lbrow{position:relative}
+.lbrow.rank-bump{animation:rankbump .5s ease}
+@keyframes rankbump{0%{transform:scale(1)}30%{transform:scale(1.03)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.lbrow.rank-bump{animation:none}}
 .openword{display:flex;flex-wrap:wrap;gap:6px}
 .openword span{padding:5px 10px;border-radius:var(--pill);background:var(--raise);font-size:12.5px}
 .openword span.correct{background:var(--lvl-easy);color:#fff}
@@ -744,12 +753,16 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
         <span class="chip chip-level" id="rrLevelChip">EASY</span>
         <span class="chip" id="rrCatChip">General</span>
       </div>
+      <h2 class="qtext" id="rrQuestionText"></h2>
       <p style="color:var(--muted);font-size:13px" data-i18n="correctAnswerLabel"></p>
       <p class="reveal-answer" id="rrAnswer">-</p>
       <p class="notice hide" id="rrDisputeNote"><span data-icon="scale"></span> <span data-i18n="disputeNote"></span></p>
       <p class="notice hide" id="rrNobodyNote" data-i18n="nobodyGotIt"></p>
 
-      <div id="rrDistribution"></div>
+      <div class="card">
+        <div class="section-title" data-i18n="roomAnswers"></div>
+        <div class="dist-list" id="rrDistribution"></div>
+      </div>
 
       <div class="reveal-result hide" id="rrMyResultWrap">
         <span class="mark" id="rrMark"></span>
@@ -883,6 +896,8 @@ const ICONS = {
   timer: '<line x1="10" x2="14" y1="2" y2="2" /> <line x1="12" x2="15" y1="14" y2="11" /> <circle cx="12" cy="14" r="8" />',
   chevronDown: '<path d="m6 9 6 6 6-6" />',
   pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
+  arrowUp: '<path d="m5 12 7-7 7 7" /><path d="M12 19V5" />',
+  arrowDown: '<path d="M12 5v14" /><path d="m19 12-7 7-7-7" />',
 };
 function icon(name, cls){
   return `<svg class="icon${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||""}</svg>`;
@@ -927,6 +942,7 @@ en: { dir:"ltr", langName:"English",
   judgePanelTitle:"Judge the disputed answers", disputedAnswers:"Disputed",
   judgeDone:"Done", judgeAutoApproved:(n)=>`${n} answer(s) auto-approved, nothing to review.`,
   nobodyGotIt:"Nobody got this one.", leaderboardTitle:"Leaderboard",
+  roomAnswers:"How the room answered",
   waitingForHostNext:"Waiting for the host to continue…",
   teamsTitle:"Teams", finalStandings:"Final standings",
   waitingForHostRematch:"Waiting for the host to rematch or leave…",
@@ -1016,6 +1032,7 @@ fr: { dir:"ltr", langName:"Français",
   judgePanelTitle:"Tranchez les réponses contestées", disputedAnswers:"Contestées",
   judgeDone:"Terminé", judgeAutoApproved:(n)=>`${n} réponse(s) approuvée(s) automatiquement, rien à revoir.`,
   nobodyGotIt:"Personne n'a trouvé celle-ci.", leaderboardTitle:"Classement",
+  roomAnswers:"Comment la salle a répondu",
   waitingForHostNext:"En attente que l'hôte continue…",
   teamsTitle:"Équipes", finalStandings:"Classement final",
   waitingForHostRematch:"En attente que l'hôte relance une partie ou quitte…",
@@ -1105,6 +1122,7 @@ ar: { dir:"rtl", langName:"العربية",
   judgePanelTitle:"افصل في الإجابات المتنازع عليها", disputedAnswers:"متنازع عليها",
   judgeDone:"تم", judgeAutoApproved:(n)=>`تمت الموافقة تلقائيًا على ${n} إجابة، لا شيء للمراجعة.`,
   nobodyGotIt:"لم يُجب أحد عن هذا السؤال بشكل صحيح.", leaderboardTitle:"لوحة الصدارة",
+  roomAnswers:"كيف أجابت الغرفة",
   waitingForHostNext:"بانتظار متابعة المضيف…",
   teamsTitle:"الفرق", finalStandings:"الترتيب النهائي",
   waitingForHostRematch:"بانتظار أن يبدأ المضيف جولة جديدة أو يغادر…",
@@ -3273,7 +3291,7 @@ on($("roomBigscreenBtn"), "click", () => {
 /* ---------------- connection ---------------- */
 function rmConnect(code, { spectator=false } = {}){
   RM.code = code; RM.spectatorJoin = spectator; RM.leavingIntentionally = false;
-  RM.clockOffset = 0; RM.minRtt = Infinity;
+  RM.clockOffset = 0; RM.minRtt = Infinity; RM._lbRanks = null;
   if (RM.ws){ try { RM.ws.close(); } catch {} }
   let url = roomApiBase().replace(/^http/,"ws") + `/api/rooms/${code}/socket?playerId=${encodeURIComponent(RM.me.id)}&nickname=${encodeURIComponent(RM.me.nickname)}`;
   if (spectator) url += "&role=spectator";
@@ -3449,6 +3467,7 @@ on($("lobbyCode"), "click", () => {
 /* ---------------- question ---------------- */
 function rmOnQuestion(data){
   RM.question = data;
+  if (data.qIndex===0) RM._lbRanks = null; // fresh round (incl. rematch) - no "previous rank" to arrow against yet
   clearInterval(RM.timerHandle);
   const localStartAt = data.startAt - RM.clockOffset;
   const delay = Math.max(0, localStartAt - Date.now());
@@ -3580,6 +3599,7 @@ function rmOnReveal(data){
   chip.textContent = q ? levelName(q.level) + (q.isDouble?" ×2":"") : "";
   if (q) chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
   if (q) $("rrCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("rrQuestionText").textContent = q?.text || "";
   $("rrAnswer").textContent = data.correctAnswer;
   $("rrDisputeNote").classList.toggle("hide", !data.disputeAutoResolved);
   $("rrNobodyNote").classList.toggle("hide", !data.nobodyGotIt);
@@ -3589,7 +3609,7 @@ function rmOnReveal(data){
     const total = data.distribution.reduce((a,b)=>a+b,0) || 1;
     const colors=["--shape-a","--shape-b","--shape-c","--shape-d"];
     distEl.innerHTML = q.options.map((opt,i) => `
-      <div class="dist-row"><span style="width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(opt)}</span>
+      <div class="dist-row"><span class="dist-label">${esc(opt)}</span>
         <div class="dist-bar"><div style="width:${data.distribution[i]/total*100}%;background:var(${colors[i%4]})"></div></div>
         <span class="dist-n">${data.distribution[i]}</span></div>`).join("");
   } else if (Array.isArray(data.distribution)){
@@ -3610,16 +3630,61 @@ function rmOnReveal(data){
     $("rrMult").textContent = mult.toFixed(1);
   }
 
-  $("rrLeaderboard").innerHTML = data.results
-    .slice().sort((a,b)=>b.total-a.total)
-    .map((r,i) => {
-      const p = RM.state.players.find(pp=>pp.id===r.playerId);
-      return `<div class="lbrow"><span class="rank">${i+1}</span><span class="lbname">${esc(p?.nickname||"?")}</span><span class="lbscore">${r.total.toLocaleString()}</span></div>`;
-    }).join("");
+  rmRenderLeaderboardWithRanks($("rrLeaderboard"), data.results.map(r=>({ playerId:r.playerId, total:r.total })));
 
   const isHost = rmIsHost();
   $("rrNextBtn").classList.toggle("hide", !isHost);
   $("rrWaitingNote").classList.toggle("hide", isHost);
+}
+
+// Shared by the reveal screen and the podium: sorts by score, and - only when a PREVIOUS
+// ranking is on record for this same room (so the very first leaderboard of a round shows no
+// arrows) - marks each row with an up/blue or down/red arrow versus its last-seen rank, bumps
+// the row, and plays a short cue for the *viewer's own* rank change (one sound per reveal, not
+// one per row - a whole leaderboard re-sorting at once would otherwise be a chord of beeps).
+function rmRenderLeaderboardWithRanks(el, rows){
+  const prevRanks = RM._lbRanks;
+  const sorted = rows.slice().sort((a,b)=>b.total-a.total);
+  const newRanks = {};
+  let myDelta = 0;
+  el.innerHTML = sorted.map((r,i) => {
+    const rank = i+1;
+    newRanks[r.playerId] = rank;
+    const prev = prevRanks?.[r.playerId];
+    let arrow = "", bump = "";
+    if (prev != null && prev !== rank){
+      const up = rank < prev;
+      arrow = `<span class="rank-arrow ${up?"up":"down"}">${icon(up?"arrowUp":"arrowDown")}</span>`;
+      bump = " rank-bump";
+      if (r.playerId===RM.me.id) myDelta = up ? 1 : -1;
+    }
+    const p = RM.state.players.find(pp=>pp.id===r.playerId);
+    return `<div class="lbrow${bump}"><span class="rank">${rank}</span>${arrow}<span class="lbname">${esc(p?.nickname||"?")}</span><span class="lbscore">${r.total.toLocaleString()}</span></div>`;
+  }).join("");
+  if (prevRanks && myDelta) rmRankSound(myDelta > 0 ? "up" : "down");
+  RM._lbRanks = newRanks;
+}
+
+// Two short sine-wave beeps via the Web Audio API - no audio asset to fetch, same
+// zero-dependency reasoning as the inline SVG icons and canvas confetti elsewhere on this page.
+let _rmAudioCtx = null;
+function rmBeep(freq, ms){
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    _rmAudioCtx = _rmAudioCtx || new Ctx();
+    const ctx = _rmAudioCtx;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = "sine"; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.16, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ms/1000);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + ms/1000);
+  } catch {}
+}
+function rmRankSound(direction){
+  if (direction==="up") { rmBeep(660, 90); setTimeout(()=>rmBeep(990, 140), 90); }
+  else { rmBeep(440, 90); setTimeout(()=>rmBeep(260, 160), 90); }
 }
 on($("rrNextBtn"), "click", () => rmSend({type:"next"}));
 
