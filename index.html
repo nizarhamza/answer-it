@@ -2314,10 +2314,18 @@ function makeRoundSession(pool, settings){
   const notices = [];
   const styleAllowsBlind = settings.style !== "open"; // blind's whole point is injecting an open Q into a choice/mixed round
 
-  function remaining(){ return n - served.length; }
+  // Anchored to the WHOLE round (n), not what's left, then `used` is subtracted - that's what
+  // lets a level's share actually run out and hand the turn to the next-largest one. This used
+  // to allocate over remaining() for adaptive, with no memory of `used` at all: recomputed from
+  // scratch every question, "easy" (always the largest single share of any profile) kept winning
+  // pickLevel()'s eligible.reduce comparison forever except for the one-question detour the
+  // no-3-in-a-row rule forced to "medium" - hard and hell never got a turn. Recomputing the
+  // *profile* every question (rollingAccuracy can move it) while anchoring the *target* to n is
+  // what actually makes "adaptive" mean "the mix shifts", not "some levels never get served".
   function levelBudget(){
-    if (fixedBudget) return LEVELS.reduce((acc,L)=>{ acc[L]=Math.max(0, fixedBudget[L]-used[L]); return acc; }, {});
-    return allocateCounts(remaining(), adaptiveProfile(rollingAccuracy(rolling)));
+    const profile = fixedBudget ? null : adaptiveProfile(rollingAccuracy(rolling));
+    const target = fixedBudget || allocateCounts(n, profile);
+    return LEVELS.reduce((acc,L)=>{ acc[L]=Math.max(0, target[L]-used[L]); return acc; }, {});
   }
 
   function pickLevel(pos){
