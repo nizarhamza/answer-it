@@ -168,11 +168,20 @@ function clampRenormalize(profile) {
 // category. Prefers a native-niche question (isNiche); otherwise promotes a plain hard
 // question with exactly one modifier. `allowBlind` should be false whenever the round's
 // answer style is locked to "choice" only - blind forces the question open (§5.2).
+// hardPool arrives sorted fresh-first (never-served questions, then longest-ago-served, then
+// best-scored) so this samples a window from the front rather than the whole list: the niche set
+// is the smallest pool in the game and a repeat there is the one players notice most.
 export function pickHellQuestion(hardPool, { allowBlind }) {
+  const front = (arr) => {
+    let span = Math.max(1, Math.min(arr.length, Math.max(3, Math.ceil(arr.length * 0.5))));
+    const fresh = arr.filter((q) => !q._seenAt).length; // whole pool when nothing is stamped
+    if (fresh >= 2) span = Math.min(span, fresh);
+    return arr[Math.floor(Math.random() * span)];
+  };
   const niche = hardPool.filter((q) => q.isNiche);
-  if (niche.length) return { question: niche[Math.floor(Math.random() * niche.length)], modifier: null };
+  if (niche.length) return { question: front(niche), modifier: null };
   if (!hardPool.length) return null;
-  const base = hardPool[Math.floor(Math.random() * hardPool.length)];
+  const base = front(hardPool);
   const modifier = allowBlind && Math.random() < 0.5 ? "blind" : "rush";
   return { question: base, modifier };
 }
@@ -284,19 +293,40 @@ export function doubleLevel(servedLevels) {
    §10.2 - Open-answer normalisation and matching
    ============================================================ */
 
-const LEADING_ARTICLES = /^(the|a|an|le|la)\s+/;
+// Arabic "ال" is a prefix with no space after it, so it is stripped inside normalizeAnswer()
+// rather than listed here.
+const LEADING_ARTICLES = /^(the|a|an|le|la|les|un|une)\s+/;
+const FRENCH_ELISION = /^(l|d|s|n|j|m|t|c|qu)['’]/;
 const ONES = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
 const TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
 
 // §10.2's listed pipeline strips punctuation (which would eat the apostrophe in "l'") before
 // stripping leading articles - that ordering can never actually match "l'", so the elision is
 // stripped here as its own first pass, before generic punctuation stripping runs.
+// Arabic writes the same word several ways, and a player typing an answer will not happen to
+// pick the form the translator emitted: ة vs ه, ى vs ي, ٱ vs ا, an optional ال, tatweel
+// stretching, Arabic-Indic digits for the Latin ones. Folding all of them is safe because both
+// sides of every comparison come through normalizeAnswer().
+export function foldArabic(s) {
+  return s
+    .replace(/\u0640/g, "")                            // tatweel (ـ) - pure decoration
+    .replace(/[\u0622\u0623\u0625\u0671]/g, "\u0627")  // آ أ إ ٱ -> ا
+    .replace(/\u0629/g, "\u0647")                      // ة -> ه
+    .replace(/\u0649/g, "\u064A")                      // ى -> ي
+    .replace(/[\u0660-\u0669]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48));
+}
+
 export function normalizeAnswer(input) {
-  let s = String(input).toLowerCase().replace(/^l['’]/, "");
+  let s = String(input).toLowerCase().replace(FRENCH_ELISION, "");
   s = s.normalize("NFD").replace(/\p{Diacritic}/gu, ""); // strip diacritics (combining marks left behind by NFD)
+  s = foldArabic(s);
   s = s.replace(/[^\p{L}\p{N}\s]/gu, ""); // strip punctuation/symbols
   s = s.replace(/\s+/g, " ").trim();
   s = s.replace(LEADING_ARTICLES, "").trim();
+  // ال only when what follows is still a real Arabic word, so "الأسد" folds to "أسد" but a
+  // short word that merely starts with those two letters is left alone.
+  s = s.replace(/^\u0627\u0644(?=[\u0600-\u06FF]{3,})/, "");
   return s;
 }
 

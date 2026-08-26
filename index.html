@@ -254,7 +254,7 @@ p{margin:0}
 /* ---------------- RTL (Arabic) ----------------
    Flexbox rows already mirror for free under dir="rtl" (row-reversal is direction-aware by
    spec), which covers most of this page's layout automatically, question content included -
-   it's machine-translated per translateQuestion() when the interface isn't English, so it's
+   it's translated per translateQuestion() when the interface isn't English, so it's
    no longer pinned LTR the way English-only content would be. What's left here is the
    handful of physical (not logical) left/right properties below, plus the lvlDot() marker
    whose gap sits on whichever side is now "before" the text it labels. */
@@ -503,6 +503,8 @@ p{margin:0}
      than exporting, so the same file works over file:// here and as a side-effect import in the
      Worker. If it fails to load the game still runs, just on API questions alone. -->
 <script src="bank/curated-core.js"></script>
+<!-- Second batch, same global. Split only so the diff stays reviewable - see its header. -->
+<script src="bank/curated-extra.js"></script>
 
 <script>
 "use strict";
@@ -569,11 +571,12 @@ function mountIcons(root=document){
 
 /* ============================================================
    i18n - English / French / Arabic interface strings. Both trivia sources are English-only
-   (ANSWER-IT.md §19), so on a non-English interface, question text/options are additionally
-   machine-translated live per question (see translateQuestion(), further down) - imperfect
-   for proper nouns, which is exactly why `questionsLanguageNote` says so plainly in the setup
-   screen rather than pretending it's a native translation. `dir` on each language drives the
-   whole page's layout direction; Arabic is RTL.
+   (ANSWER-IT.md §19), so on a non-English interface the questions themselves go through the
+   translation chain in translateQuestion() further down: hand-written locale banks for the
+   curated core, then the Worker, then MyMemory. Only the last of those is properly unreliable,
+   and `questionsLanguageNote` says which half of a round it applies to rather than pretending
+   the whole thing is a native translation. `dir` on each language drives the whole page's
+   layout direction; Arabic is RTL.
    ============================================================ */
 const I18N = {
 en: { dir:"ltr", langName:"English",
@@ -595,7 +598,7 @@ en: { dir:"ltr", langName:"English",
   extendedTimeLabel:"Extended time", extendedTimeSub:"×1.5 on every clock - scored fairly on the same curve",
   pickCategoryWarning:"Pick at least one category.",
   startRoundBtn:(n)=>`Start - ${n} + The Double`,
-  questionsLanguageNote:"Questions come from English-only sources and are machine-translated - quality can vary, especially for names.",
+  questionsLanguageNote:"Curated questions are hand-translated. Questions pulled from the trivia APIs are machine-translated, so quality can vary there - especially for names.",
   buildingRound:"Building your round…", fetchingQuestions:"Fetching questions…",
   toppingUp:(i,total)=>`Topping up thin categories… (${i}/${total})`, cancel:"Cancel",
   couldntLoad:"Couldn't load questions",
@@ -656,7 +659,7 @@ fr: { dir:"ltr", langName:"Français",
   extendedTimeLabel:"Temps prolongé", extendedTimeSub:"×1,5 sur chaque chrono - noté équitablement sur la même courbe",
   pickCategoryWarning:"Choisissez au moins une catégorie.",
   startRoundBtn:(n)=>`Commencer - ${n} + Le Double`,
-  questionsLanguageNote:"Les questions proviennent de sources uniquement en anglais et sont traduites automatiquement - la qualité peut varier, surtout pour les noms propres.",
+  questionsLanguageNote:"Les questions de la sélection maison sont traduites à la main. Celles issues des API de quiz sont traduites automatiquement : la qualité peut donc varier, surtout pour les noms propres.",
   buildingRound:"Préparation de la partie…", fetchingQuestions:"Récupération des questions…",
   toppingUp:(i,total)=>`Complément des catégories peu fournies… (${i}/${total})`, cancel:"Annuler",
   couldntLoad:"Impossible de charger les questions",
@@ -717,7 +720,7 @@ ar: { dir:"rtl", langName:"العربية",
   extendedTimeLabel:"وقت إضافي", extendedTimeSub:"×1.5 على كل مؤقّت - يُحتسب بعدل على نفس المعيار",
   pickCategoryWarning:"اختر فئة واحدة على الأقل.",
   startRoundBtn:(n)=>`ابدأ - ${n} + السؤال المضاعف`,
-  questionsLanguageNote:"الأسئلة تأتي من مصادر إنجليزية فقط وتُترجم آليًا - قد تتفاوت الجودة، خصوصًا في الأسماء.",
+  questionsLanguageNote:"الأسئلة المنتقاة مُترجمة يدويًا، أما الآتية من واجهات الأسئلة فتُترجم آليًا وقد تتفاوت جودتها - خصوصًا في الأسماء.",
   buildingRound:"جارٍ تجهيز الجولة…", fetchingQuestions:"جارٍ جلب الأسئلة…",
   toppingUp:(i,total)=>`جارٍ استكمال الفئات الناقصة… (${i}/${total})`, cancel:"إلغاء",
   couldntLoad:"تعذّر تحميل الأسئلة",
@@ -798,6 +801,7 @@ function applyLanguage(newLang){
   $("revealNext").innerHTML = `${t("next")} ${icon(navIcon("forward"))}`;
   renderCatGrid();
   refreshSetup();
+  loadLocaleBank(lang); // tier 0 of the translation chain - fetched once, in the background
 }
 
 function toast(msg, ms=4200){
@@ -1002,10 +1006,19 @@ function levelEligibleAt(level, pos, n, placedLevels){
   return true;
 }
 function pickHellQuestion(hardPool, { allowBlind }){
+  // hardPool arrives fresh-first from buildPool, so sample a front window rather than the whole
+  // list: the niche set is the smallest pool in the game and a repeat there is the one players
+  // notice most.
+  const front = arr => {
+    let span = Math.max(1, Math.min(arr.length, Math.max(3, Math.ceil(arr.length * 0.5))));
+    const fresh = arr.filter(q => !q._seenAt).length; // 0 when nothing is stamped (multiplayer)
+    if (fresh >= 2) span = Math.min(span, fresh);
+    return arr[Math.floor(Math.random() * span)];
+  };
   const niche = hardPool.filter(q=>q.isNiche);
-  if (niche.length) return { question: niche[Math.floor(Math.random()*niche.length)], modifier: null };
+  if (niche.length) return { question: front(niche), modifier: null };
   if (!hardPool.length) return null;
-  const base = hardPool[Math.floor(Math.random()*hardPool.length)];
+  const base = front(hardPool);
   const modifier = allowBlind && Math.random()<0.5 ? "blind" : "rush";
   return { question: base, modifier };
 }
@@ -1025,17 +1038,50 @@ function doubleLevel(servedLevels){
 }
 
 /* ---------------- Open-answer matching (§10.2) ---------------- */
-const LEADING_ARTICLES = /^(the|a|an|le|la)\s+/;
+// Arabic "ال" is a prefix with no space after it, so it is stripped inside
+// normalizeAnswer() rather than listed here.
+const LEADING_ARTICLES = /^(the|a|an|le|la|les|un|une)\s+/;
+const FRENCH_ELISION = /^(l|d|s|n|j|m|t|c|qu)['’]/;
 const ONES = {zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
 const TENS = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+// Arabic writes the same word several ways, and a player typing an answer will not happen to
+// pick the form the translator emitted: ة vs ه, ى vs ي, ٱ vs ا, an optional ال, tatweel
+// stretching, Arabic-Indic digits for the Latin ones. Folding all of them is safe because both
+// sides of every comparison come through here - the cost is two genuinely different answers
+// folding together, which is far rarer than the near-miss it fixes.
+function foldArabic(s){
+  return s
+    .replace(/\u0640/g, "")                            // tatweel (ـ) - pure decoration
+    .replace(/[\u0622\u0623\u0625\u0671]/g, "\u0627")  // آ أ إ ٱ -> ا
+    .replace(/\u0629/g, "\u0647")                      // ة -> ه
+    .replace(/\u0649/g, "\u064A")                      // ى -> ي
+    .replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[\u06F0-\u06F9]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48));
+}
 function normalizeAnswer(input){
-  let s = String(input).toLowerCase().replace(/^l['’]/, "");
+  let s = String(input).toLowerCase().replace(FRENCH_ELISION, "");
   s = s.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  s = foldArabic(s);
   s = s.replace(/[^\p{L}\p{N}\s]/gu, "");
   s = s.replace(/\s+/g," ").trim();
   s = s.replace(LEADING_ARTICLES, "").trim();
+  // ال only when what follows is still a real Arabic word, so "الأسد" folds to "أسد" but a short
+  // word that merely starts with those two letters is left alone.
+  s = s.replace(/^\u0627\u0644(?=[\u0600-\u06FF]{3,})/, "");
   return s;
 }
+// A source-independent identity for a question. Source ids are namespaced per provider
+// (`cur:...`, a Trivia API uuid, `otdb:...`), so the *same* question arriving from two sources
+// used to look like two different questions: it could be drawn twice in one round, and serving
+// it from one source never stopped the other copy turning up in the next round. The normalised
+// question text is the one thing all three sources share, so that - not the id - is what
+// in-round dedupe and the seen store key on.
+function hashStr(s){
+  let h = 2166136261;
+  for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h>>>0).toString(36);
+}
+function contentKey(text){ return "q" + hashStr(normalizeAnswer(text)); }
 function stripParenthetical(s){ return String(s).replace(/\s*\([^)]*\)/g,"").trim(); }
 const ALIAS_GROUPS = [
   ["usa","united states","united states of america","america"],
@@ -1154,7 +1200,7 @@ function normalizeQuestion(raw, source, categoryKey){
     const incorrect = (raw.incorrectAnswers||[]).map(s=>String(s).trim());
     if (!text || text.length>MAX_QUESTION_LEN || correct.length<MIN_ANSWER_LEN) return null;
     const options = shuffleArr([correct, ...incorrect]);
-    return { id: raw.id, source:"trivia-api", text, category:categoryKey, level:raw.difficulty, type:"choice",
+    return { id: raw.id, key: contentKey(text), source:"trivia-api", text, category:categoryKey, level:raw.difficulty, type:"choice",
       options, answerIndex: options.indexOf(correct), accepted: buildAccepted(correct), modifiers:[], timeLimit:null,
       media:null, isNiche: !!raw.isNiche, correctAnswer: correct };
   }
@@ -1165,7 +1211,7 @@ function normalizeQuestion(raw, source, categoryKey){
     const incorrect = (raw.incorrect_answers||[]).map(s=>dec(String(s)).trim());
     if (!text || text.length>MAX_QUESTION_LEN || correct.length<MIN_ANSWER_LEN) return null;
     const options = shuffleArr([correct, ...incorrect]);
-    return { id:`otdb:${categoryKey}:${raw.difficulty}:${text.slice(0,40)}`, source:"opentdb", text, category:categoryKey,
+    return { id:`otdb:${categoryKey}:${raw.difficulty}:${text.slice(0,40)}`, key: contentKey(text), source:"opentdb", text, category:categoryKey,
       level:raw.difficulty, type:"choice", options, answerIndex: options.indexOf(correct), accepted: buildAccepted(correct),
       modifiers:[], timeLimit:null, media:null, isNiche:false, correctAnswer: correct };
   }
@@ -1185,11 +1231,66 @@ async function fetchTriviaApi({categories=[], tags=[], limit=50, difficulties=["
   const data = await fetchJson(`https://the-trivia-api.com/v2/questions?${p}`);
   return Array.isArray(data) ? data : [];
 }
+/* OpenTDB session token. OpenTDB will happily hand back the same popular questions over and
+   over; a session token is its own answer to that - it never returns a question twice for the
+   same token until the category is exhausted, and then says so (response_code 4) instead of
+   repeating. That makes it the one repetition fix we do not have to invent. Tokens go stale
+   after 6 hours idle (response_code 3), so the stored one carries a timestamp.
+   Everything below goes through opentdbWait(): OpenTDB rate-limits to one request per 5s per
+   IP, and a token request is a request like any other. */
+const OPENTDB_TOKEN_KEY = "answerit_opentdb_token";
+const OPENTDB_TOKEN_TTL_MS = 5.5 * 60 * 60 * 1000; // under OpenTDB's own 6h idle expiry
+let opentdbThrottle = null;
+function opentdbWait(){
+  // Built lazily rather than at load so the interval is only ever paid by a session that
+  // actually reaches OpenTDB - and so a test can swap createThrottle out first.
+  if (!opentdbThrottle) opentdbThrottle = createThrottle(5500);
+  return opentdbThrottle();
+}
+function readStoredToken(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(OPENTDB_TOKEN_KEY) || "null");
+    if (saved && saved.token && Date.now() - saved.at < OPENTDB_TOKEN_TTL_MS) return saved.token;
+  } catch {}
+  return null;
+}
+function storeToken(token){
+  try {
+    if (token) localStorage.setItem(OPENTDB_TOKEN_KEY, JSON.stringify({ token, at: Date.now() }));
+    else localStorage.removeItem(OPENTDB_TOKEN_KEY);
+  } catch {}
+}
+async function requestOpenTDBToken(){
+  await opentdbWait();
+  const data = await fetchJson("https://opentdb.com/api_token.php?command=request");
+  const token = data && data.response_code === 0 ? data.token : null;
+  storeToken(token);
+  return token;
+}
+async function resetOpenTDBToken(token){
+  await opentdbWait();
+  await fetchJson(`https://opentdb.com/api_token.php?command=reset&token=${encodeURIComponent(token)}`);
+  // A reset keeps the same token and simply forgets what it has served, so the stored timestamp
+  // is refreshed rather than the token thrown away.
+  storeToken(token);
+}
 async function fetchOpenTDB({categoryId, difficulty, amount=50}={}){
-  const p = new URLSearchParams({ amount:String(Math.min(50,amount)), category:String(categoryId), difficulty, type:"multiple", encode:"url3986" });
-  const data = await fetchJson(`https://opentdb.com/api.php?${p}`);
-  if (!data || data.response_code!==0) return [];
-  return data.results||[];
+  let token = readStoredToken() || await requestOpenTDBToken();
+  for (let attempt = 0; attempt < 2; attempt++){
+    const p = new URLSearchParams({ amount:String(Math.min(50,amount)), category:String(categoryId), difficulty, type:"multiple", encode:"url3986" });
+    if (token) p.set("token", token);
+    await opentdbWait();
+    const data = await fetchJson(`https://opentdb.com/api.php?${p}`);
+    if (!data) return [];
+    if (data.response_code === 0) return data.results || [];
+    // 4 = this token has now seen every question in that bucket; 3 = the token expired. Both are
+    // recoverable exactly once, and both fall through to an untokened request if recovery fails
+    // rather than leaving the round short.
+    if (data.response_code === 4 && token){ await resetOpenTDBToken(token); continue; }
+    if (data.response_code === 3){ storeToken(null); token = await requestOpenTDBToken(); continue; }
+    return [];
+  }
+  return [];
 }
 function createThrottle(minIntervalMs){
   let last=0;
@@ -1455,10 +1556,12 @@ function normalizeCurated(row, buildAccepted, { asOpen = false } = {}) {
   const correct = String(row.a).trim();
   const options = shuffle([correct, ...row.w.map((s) => String(s).trim())]);
   const open = asOpen && row.o === true;
+  const text = String(row.t).trim();
   return {
     id: `cur:${row.c}:${slug(row.t)}`,
+    key: contentKey(text),
     source: "custom",
-    text: String(row.t).trim(),
+    text,
     category: row.c,
     level: row.l,
     type: open ? "open" : "choice",
@@ -1505,7 +1608,8 @@ async function buildPool(categories, n, onProgress, shouldCancel){
   for (const c of categories){
     for (const q of loadCurated(buildAccepted, { category:c })){
       if (!pool[c][q.level]) continue;
-      seen.add(q.id);
+      if (seen.has(q.key)) continue;
+      seen.add(q.key);
       pool[c][q.level].push({ ...q, _score: CURATED_SCORE });
     }
   }
@@ -1516,7 +1620,9 @@ async function buildPool(categories, n, onProgress, shouldCancel){
       if (!cat || !categories.includes(cat)) continue;
       const q = normalizeQuestion(raw, source, cat);
       if (!q || !["easy","medium","hard"].includes(q.level)) continue;
-      if (seen.has(q.id)) continue;
+      // Keyed on content, so a question the curated bank already covers (or that the other API
+      // also returned) is skipped rather than entering the pool a second time under a new id.
+      if (seen.has(q.key)) continue;
       // §6.5 - the APIs are a volume source, not a quality source. A gate failure never enters
       // the pool; what survives carries its score so the bucket can sort best-first. Note the
       // MIN_BANK_SCORE threshold is deliberately NOT applied here: solo has no bank to fall back
@@ -1524,10 +1630,21 @@ async function buildPool(categories, n, onProgress, shouldCancel){
       // ever reached if the bucket runs dry.
       const grade = gradeQuestion({ ...q, tags: raw.tags, regions: raw.regions });
       if (!grade.ok) continue;
-      seen.add(q.id);
+      seen.add(q.key);
       pool[cat][q.level].push({ ...q, _score: grade.score });
     }
   }
+  // Before spending a single request: whatever the last round fetched and never used. Deduped on
+  // content like everything else, so a carried-over question the curated bank already covers is
+  // dropped rather than shadowing it.
+  for (const q of loadCarryover()){
+    if (!q || !categories.includes(q.category)) continue;
+    if (!pool[q.category] || !pool[q.category][q.level]) continue;
+    if (seen.has(q.key)) continue;
+    seen.add(q.key);
+    pool[q.category][q.level].push(q);
+  }
+
   onProgress?.({ key:"fetchingQuestions" });
   const triviaCats = [...new Set(categories.flatMap(c => TRIVIA_API_CATEGORIES[c]||[]))];
   const calls = [];
@@ -1544,7 +1661,6 @@ async function buildPool(categories, n, onProgress, shouldCancel){
   const need = [];
   for (const c of categories) for (const L of ["easy","medium","hard"]) if (pool[c][L].length < minBucket) need.push([c,L]);
   if (need.length){
-    const wait = createThrottle(5500);
     const capped = need.slice(0, MAX_OPENTDB_TOPUPS);
     for (let i=0; i<capped.length; i++){
       if (shouldCancel?.()) throw new RoundCancelled();
@@ -1553,25 +1669,28 @@ async function buildPool(categories, n, onProgress, shouldCancel){
       const ids = OPENTDB_CATEGORIES[c]||[];
       if (!ids.length) continue;
       const id = ids[Math.floor(Math.random()*ids.length)];
-      await wait();
-      const r = await fetchOpenTDB({categoryId:id, difficulty:L, amount:50});
+      const r = await fetchOpenTDB({categoryId:id, difficulty:L, amount:50}); // throttles itself
       ingest(r, "opentdb", c);
     }
   }
-  // Skip questions served in recent rounds when the bucket can afford it, so a rematch (small
-  // curated buckets especially - see bank/curated-core.js) doesn't just redraw the same handful
-  // of questions. Falls back to including them when too few fresh ones remain, rather than
-  // ever starving a round.
-  const seenIds = new Set(loadSeen());
-  if (seenIds.size){
-    for (const c of categories) for (const L of ["easy","medium","hard"]){
-      const arr = pool[c][L];
-      const fresh = arr.filter(q => !seenIds.has(q.id));
-      if (fresh.length >= Math.min(arr.length, minBucket)) pool[c][L] = fresh;
-    }
+  // Freshness is a sort key, not a filter. The previous version dropped seen questions from a
+  // bucket only while `fresh.length >= min(arr.length, minBucket)` still held, which quietly did
+  // nothing on exactly the thin single-category buckets that needed it most. Sorting instead can
+  // never starve a round: a repeat is only reached once every fresh question in the bucket has
+  // been used up, and when it is, the one you saw longest ago goes first. Quality (§6.5) stays
+  // the tie-break, so best-first still holds among questions of equal freshness.
+  const seenAt = loadSeen();
+  for (const c of categories) for (const L of ["easy","medium","hard"]){
+    pool[c][L].sort((a,b) => {
+      const sa = seenAt.get(a.key) || 0, sb = seenAt.get(b.key) || 0;
+      if (!sa !== !sb) return sa ? 1 : -1;    // never served before wins outright
+      if (sa !== sb) return sa - sb;          // then longest-ago-seen
+      return (b._score||0) - (a._score||0);   // then best-first
+    });
+    // Stamped so the samplers can see where the fresh half of a bucket ends without re-reading
+    // localStorage on every draw.
+    for (const q of pool[c][L]) q._seenAt = seenAt.get(q.key) || 0;
   }
-  // Best-first, so draw() can bias toward quality without ever running a bucket dry (§6.5).
-  for (const c of categories) for (const L of ["easy","medium","hard"]) pool[c][L].sort((a,b)=>(b._score||0)-(a._score||0));
   return pool;
 }
 class RoundCancelled extends Error {}
@@ -1595,7 +1714,7 @@ function nearestAvailableLevel(pool, categories, preferred){
 }
 
 // §6.5.6 - the hybrid draw. Curated questions win most draws but not all of them: leaning 100%
-// on the curated core would make every round the same 235 questions, which is the *other* half
+// on the curated core would make every round the same 505 questions, which is the *other* half
 // of the "these questions are repetitive" complaint. So we roll for a side first, then sample.
 // Within the API side the bucket is sorted best-first, so we only sample its stronger half.
 const CURATED_SHARE = 0.6; // mirrors DEFAULT_CURATED_SHARE in worker/src/quality.js
@@ -1603,10 +1722,30 @@ function pickQualityIndex(arr){
   if (arr.length <= 1) return 0;
   const curated = [], rest = [];
   for (let i=0; i<arr.length; i++) (arr[i].source === "custom" ? curated : rest).push(i);
-  const useCurated = curated.length > 0 && (rest.length === 0 || Math.random() < CURATED_SHARE);
+  const freshIn = list => list.filter(i => !arr[i]._seenAt).length;
+  const cFresh = freshIn(curated), rFresh = freshIn(rest);
+  let useCurated = curated.length > 0 && (rest.length === 0 || Math.random() < CURATED_SHARE);
+  // The 60/40 split decides which side is *better*, not which side is available. When one side
+  // has no questions left that you haven't already seen and the other does, take the fresh side:
+  // a fresh API question beats a curated repeat, and vice versa. Without this the curated side
+  // kept winning its 60% of the draws long after its small buckets had been used up.
+  if (useCurated && cFresh === 0 && rFresh > 0) useCurated = false;
+  else if (!useCurated && rFresh === 0 && cFresh > 0) useCurated = true;
   const from = useCurated ? curated : rest;
-  const window = useCurated ? from.length : Math.max(1, Math.ceil(from.length * 0.5));
-  return from[Math.floor(Math.random()*window)];
+  // `from` keeps the bucket's order, which buildPool sorts fresh-first. Sampling a window from
+  // the front is what carries that ordering into the draw - taking the curated side uniformly,
+  // as this used to, threw the freshness sort away for 60% of every round. The floor keeps the
+  // window wide enough that a small bucket still varies between rounds instead of going
+  // deterministic.
+  let span = Math.max(1, Math.min(from.length, Math.max(4, Math.ceil(from.length * 0.5))));
+  // Never let the window reach past the fresh questions into ones already played, so long as
+  // two fresh ones remain to choose between. Without this clamp the floor above happily spilled
+  // into the seen tail of a small curated bucket, which is precisely the overlap the freshness
+  // sort exists to remove. (`from` holds bucket indices in order, and the bucket is sorted
+  // fresh-first, so the fresh entries are its first `fresh` positions.)
+  const fresh = from.filter(i => !arr[i]._seenAt).length;
+  if (fresh >= 2) span = Math.min(span, fresh);
+  return from[Math.floor(Math.random()*span)];
 }
 
 function makeRoundSession(pool, settings){
@@ -1615,7 +1754,7 @@ function makeRoundSession(pool, settings){
   const fixedBudget = settings.intensity==="adaptive" ? null : allocateCounts(n, PROFILES[settings.intensity]);
   const used = { easy:0, medium:0, hard:0, hell:0 };
   const served = []; // {level, category}
-  const servedIds = [];
+  const servedKeys = [];
   const rolling = [];
   const lastCats = [];
   const notices = [];
@@ -1707,7 +1846,7 @@ function makeRoundSession(pool, settings){
     }
     used[drawn.question.level] = (used[drawn.question.level]||0) + 1;
     served.push({ level: drawn.question.level, category: drawn.category });
-    servedIds.push(drawn.question.id);
+    servedKeys.push(drawn.question.key);
     return finalize({ ...drawn.question, category: drawn.category });
   }
 
@@ -1719,7 +1858,7 @@ function makeRoundSession(pool, settings){
       if (nearest) drawn = draw(nearest);
     }
     if (!drawn) return null;
-    servedIds.push(drawn.question.id);
+    servedKeys.push(drawn.question.key);
     return finalize({ ...drawn.question, category: drawn.category }, true);
   }
 
@@ -1728,11 +1867,26 @@ function makeRoundSession(pool, settings){
     if (rolling.length>5) rolling.shift();
   }
 
-  return { nextQuestion, buildDouble, recordOutcome, notices, get rolling(){ return rolling; }, get servedIds(){ return servedIds; } };
+  return { nextQuestion, buildDouble, recordOutcome, notices, get rolling(){ return rolling; }, get servedKeys(){ return servedKeys; } };
 }
 
 /* ============================================================
-   Live question translation (MyMemory - api.mymemory.translated.net, no key required). Both
+   Question translation. Four tiers, each one the backup for the one above it:
+
+     0. bank/curated-<lang>.js - hand-written translations of the curated core (~60% of a round).
+        Instant, free, offline, and the only tier whose quality is guaranteed.
+     1. POST <TRANSLATE_ENDPOINT>/api/translate - the Worker translating the WHOLE question on
+        Workers AI with the category and every option in one prompt, cached in KV so a question
+        is only ever translated once, for everybody. This is the tier that actually understands
+        context; it is optional and stays off until TRANSLATE_ENDPOINT is filled in.
+     2. MyMemory - per-string, no context, guarded hard (see plausibleTranslation) because it is
+        a translation-memory lookup rather than a translator.
+     3. The English original, which is always a correct question.
+
+   Nothing below tier 0 is required for the game to work, and a failure at any tier falls quietly
+   to the next - there is no state in which a round stops because a translator did.
+
+   Tier 2 detail (MyMemory - api.mymemory.translated.net, no key required). Both
    trivia sources are English-only (§6.1), so a non-English interface machine-translates each
    question's text/options right before it's shown rather than leaving them untranslated -
    confirmed live before relying on it: proper CORS headers, no key, reasonable quality.
@@ -1740,7 +1894,110 @@ function makeRoundSession(pool, settings){
    to the original English string rather than blocking the round. Cached (memory + localStorage)
    since trivia questions reuse the same words constantly.
    ============================================================ */
-const TRANSLATE_CACHE_KEY = "answerit_translate_cache";
+// v2: the v1 cache was written before plausibleTranslation() existed, so it can hold the
+// exact TM garbage the guardrails now reject. Bumping the key retires it.
+/* ---------------- Tier 0: the hand-written locale banks ---------------- */
+// Loaded on demand rather than from a <script> tag in the head: each bank is ~60-70 KB and an
+// English player should never pay for one. Missing file, offline, blocked - all resolve to null
+// and the chain simply carries on at tier 1.
+const LOCALE_BANK_VAR = { ar: "ANSWER_IT_BANK_AR", fr: "ANSWER_IT_BANK_FR" };
+const localeBankLoads = {};
+function loadLocaleBank(langCode){
+  const varName = LOCALE_BANK_VAR[langCode];
+  if (!varName) return Promise.resolve(null);
+  if (globalThis[varName]) return Promise.resolve(globalThis[varName]);
+  if (localeBankLoads[langCode]) return localeBankLoads[langCode];
+  localeBankLoads[langCode] = new Promise((resolve) => {
+    const el = document.createElement("script");
+    el.src = `bank/curated-${langCode}.js`;
+    el.onload = () => resolve(globalThis[varName] || null);
+    el.onerror = () => resolve(null);
+    document.head.appendChild(el);
+  });
+  return localeBankLoads[langCode];
+}
+// Keyed on the exact English question text, so an entry survives the option shuffle and any
+// hand-edit of the bank file. A question the bank does not cover just falls through.
+function localeBankTranslation(q){
+  const bank = globalThis[LOCALE_BANK_VAR[lang]];
+  const entry = bank && bank[q.text];
+  if (!entry) return null;
+  const map = entry.o || {};
+  return {
+    text: entry.t,
+    options: Array.isArray(q.options) && q.options.length ? q.options.map((o) => map[o] || o) : null,
+    answer: map[q.correctAnswer] || q.correctAnswer,
+  };
+}
+
+/* ---------------- Tier 1: the Worker (whole question, with context) ---------------- */
+// Paste your deployed Worker's origin here to switch this tier on, e.g.
+//   "https://answer-it-api.your-subdomain.workers.dev"
+// Empty means the tier is skipped entirely - no request, no delay, no error. See worker/ and
+// DEPLOY.md. Everything still works without it; the API-sourced ~40% of a round just falls back
+// to MyMemory, exactly as it did before the Worker existed.
+const TRANSLATE_ENDPOINT = "";
+// Runtime override, mostly so a deployed build can be pointed at a `wrangler dev` Worker without
+// a redeploy - in the browser console:
+//   localStorage.setItem("answerit_translate_endpoint", "http://localhost:8787")
+// and removeItem() to go back to whatever is baked in above.
+const TRANSLATE_ENDPOINT_KEY = "answerit_translate_endpoint";
+function translateEndpoint(){
+  try { return localStorage.getItem(TRANSLATE_ENDPOINT_KEY) || TRANSLATE_ENDPOINT; }
+  catch { return TRANSLATE_ENDPOINT; }
+}
+const WORKER_CACHE_KEY = "answerit_worker_translations";
+const WORKER_TIMEOUT_MS = 7000;
+const WORKER_MAX_FAILURES = 2; // two strikes and this tier sits out the rest of the session
+const workerCache = new Map();
+try {
+  const saved = JSON.parse(localStorage.getItem(WORKER_CACHE_KEY) || "{}");
+  for (const [k, v] of Object.entries(saved)) workerCache.set(k, v);
+} catch {}
+let workerFailures = 0;
+function saveWorkerCache(){
+  try {
+    const capped = [...workerCache.entries()].slice(-400);
+    localStorage.setItem(WORKER_CACHE_KEY, JSON.stringify(Object.fromEntries(capped)));
+  } catch {}
+}
+async function workerTranslation(q){
+  const endpoint = translateEndpoint();
+  if (!endpoint || workerFailures >= WORKER_MAX_FAILURES) return null;
+  const ck = lang + ":" + q.key;
+  if (workerCache.has(ck)) return workerCache.get(ck);
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), WORKER_TIMEOUT_MS);
+    const res = await fetch(endpoint.replace(/\/+$/, "") + "/api/translate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({ lang, questions: [{
+        key: q.key, category: q.category, text: q.text,
+        options: Array.isArray(q.options) ? q.options : [],
+        answer: q.correctAnswer,
+      }] }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) { workerFailures++; return null; }
+    const data = await res.json();
+    // A question the Worker could not translate is absent from `results` rather than an error:
+    // that is a fall-through, not an outage, so it must not count as a strike.
+    const value = data && data.results && data.results[q.key];
+    if (!value) return null;
+    workerCache.set(ck, value);
+    saveWorkerCache();
+    return value;
+  } catch {
+    workerFailures++; // not deployed, offline or too slow - stop paying the timeout every question
+    return null;
+  }
+}
+
+/* ---------------- Tier 2: MyMemory ---------------- */
+const TRANSLATE_CACHE_KEY = "answerit_translate_cache_v2";
+try { localStorage.removeItem("answerit_translate_cache"); } catch {}
 const translationCache = new Map();
 try {
   const saved = JSON.parse(localStorage.getItem(TRANSLATE_CACHE_KEY) || "{}");
@@ -1771,9 +2028,15 @@ async function translateOne(text, targetLang){
     if (data.quotaFinished) { translationUnavailable = true; return text; }
     const translated = data.responseData?.translatedText;
     if (!translated || typeof translated !== "string") return text;
-    translationCache.set(key, translated);
+    const match = Number(data.responseData?.match);
+    const usable = (!Number.isFinite(match) || match >= MIN_TM_MATCH)
+      && plausibleTranslation(text, translated, targetLang);
+    // A rejection is cached as the English original on purpose: MyMemory is deterministic, so
+    // re-asking would burn quota to get the same bad answer back.
+    const result = usable ? translated : text;
+    translationCache.set(key, result);
     saveTranslationCache();
-    return translated;
+    return result;
   } catch {
     return text; // offline / timed out / API hiccup - the English original is still a correct question
   }
@@ -1796,6 +2059,25 @@ async function translateOne(text, targetLang){
 // where translation is actually correct and valuable - confirmed live too: "France" -> "فرنسا"
 // is the right answer, not a bug. Not perfect (no heuristic like this can be), but it removes
 // the worst, most visible failure case.
+// MyMemory is a translation-*memory* lookup, not a translator: on a poor match it returns the
+// closest segment someone once stored, which is exactly how "The Velvet Underground" came back
+// as a descriptive sentence. `match` is its own confidence in that lookup and was being thrown
+// away. Anything failing these checks falls back to the English original - an untranslated
+// question is still a correct question, a mistranslated one is not.
+const MIN_TM_MATCH = 0.7;
+const TM_NOISE = /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID (LANGUAGE|SOURCE|TARGET)|NO QUERY SPECIFIED/i;
+const TARGET_SCRIPT = { ar: /[\u0600-\u06FF]/ }; // fr shares the Latin script - nothing to assert
+function plausibleTranslation(src, out, targetLang){
+  const a = String(src).trim(), b = String(out).trim();
+  if (!b || b === a) return false;
+  if (TM_NOISE.test(b)) return false;
+  if (b.length > a.length * 3 + 20) return false;   // a whole unrelated TM segment pulled in
+  if (b.length * 3 + 20 < a.length) return false;   // truncated to something useless
+  if (b.length > a.length * 1.5 && b.toLowerCase().includes(a.toLowerCase())) return false;
+  const script = TARGET_SCRIPT[targetLang];
+  if (script && !script.test(b)) return false;      // came back in English wearing a hat
+  return true;
+}
 const MINOR_WORDS = new Set(["a","an","the","of","and","or","in","on","at","for","to","de","du","des","le","la","les","et"]);
 function looksLikeProperNoun(text){
   const words = String(text).trim().split(/\s+/);
@@ -1804,28 +2086,99 @@ function looksLikeProperNoun(text){
   if (!significant.length) return false;
   return significant.every(w => /^[A-Z0-9]/.test(w));
 }
-// Translates `s` unless it looks like a proper noun, in which case it's kept native for free
-// (no network/cache call at all - also saves quota for the strings worth spending it on).
-function translateUnlessProperNoun(s, targetLang){
-  return looksLikeProperNoun(s) ? Promise.resolve(s) : translateOne(s, targetLang);
+// Which categories answer with *names* rather than words. Music, screen, games and arts answer
+// with bands, films, characters and titles almost every time - the exact material free MT
+// mangles, and where a literal translation is wrong by definition. Geography, science, history
+// and the rest answer with countries, elements and common nouns, where translating is the whole
+// point ("France" -> "فرنسا" is right, not a bug). The question *text* always translates
+// either way: it is prose, not a name.
+const NAME_HEAVY_CATEGORIES = new Set(["music", "screen", "games", "arts"]);
+const NUMERIC_OPTION = /^[\d\s.,:/'"\u2013-]+$/; // years, scores, counts - identical in every language
+
+// looksLikeProperNoun() only ever sees one option at a time, so it cannot tell "Nirvana" the
+// band from "nirvana" the noun. Judging the *set* can: if any one option is an unmistakable
+// multi-word title, the options are a list of names and all four stay native. That is the
+// closest thing to context this engine can be handed, and it catches the case that hurt -
+// "Dream Theater / Pink Floyd / Led Zeppelin / The Velvet Underground". A set with no such
+// member ("France / Spain / Italy / Poland") is left to translate normally.
+function optionSetLooksLikeNames(options){
+  const opts = (options || []).map(o => String(o).trim()).filter(Boolean);
+  if (opts.length < 2) return false;
+  if (!opts.every(o => /^[\p{Lu}\p{N}]/u.test(o))) return false;
+  return opts.some(o => looksLikeProperNoun(o));
+}
+
+// Keep a string native (no network call at all, which also saves quota for the strings worth
+// spending it on) when translating it would be wrong.
+function shouldKeepNative(value, { category, nameSet }){
+  const str = String(value ?? "").trim();
+  if (!str) return true;
+  if (NUMERIC_OPTION.test(str)) return true;
+  if (nameSet) return true;
+  if (NAME_HEAVY_CATEGORIES.has(category)) return true;
+  return looksLikeProperNoun(str);
+}
+
+async function myMemoryTranslation(q){
+  if (Array.isArray(q.options) && q.options.length){
+    const nameSet = optionSetLooksLikeNames(q.options);
+    const [text, ...options] = await Promise.all([
+      translateOne(q.text, lang), // the connective question text always translates - it's prose, not a name
+      ...q.options.map(o => shouldKeepNative(o, { category:q.category, nameSet })
+        ? Promise.resolve(o)
+        : translateOne(o, lang)),
+    ]);
+    return { text, options, answer: options[q.answerIndex] };
+  }
+  const [text, answer] = await Promise.all([
+    translateOne(q.text, lang),
+    shouldKeepNative(q.correctAnswer, { category:q.category, nameSet:false })
+      ? Promise.resolve(q.correctAnswer)
+      : translateOne(q.correctAnswer, lang),
+  ]);
+  return { text, options: null, answer };
+}
+
+/* ---------------- The chain ---------------- */
+// First tier to return something usable wins; everything below it is the backup.
+async function resolveTranslation(q){
+  const fromBank = localeBankTranslation(q);
+  if (fromBank) return fromBank;
+  const fromWorker = await workerTranslation(q);
+  if (fromWorker) return fromWorker;
+  try { return await myMemoryTranslation(q); } catch { return null; }
+}
+
+// Applies a { text, options, answer } translation to a question, or leaves it in English.
+// Scoring never depends on translation quality: a choice question's correctness is the array
+// POSITION (answerIndex), which every tier preserves, and an open question keeps matching against
+// the original English `correctAnswer` (matchOpenAnswer is tuned around English word shapes)
+// while the translated form is appended to `accepted[]`, so typing it in either language works.
+function applyTranslation(q, tr){
+  if (!tr) return q;
+  const text = (typeof tr.text === "string" && tr.text.trim()) ? tr.text : q.text;
+  if (Array.isArray(q.options) && q.options.length){
+    const translated = Array.isArray(tr.options) ? tr.options : null;
+    // Two options collapsing onto the same string makes the question unanswerable, so the whole
+    // set reverts to English rather than shipping a broken question. answerIndex is positional,
+    // so it stays correct either way.
+    const usable = translated
+      && translated.length === q.options.length
+      && translated.every(o => typeof o === "string" && o.trim())
+      && new Set(translated.map(o => normalizeAnswer(o))).size === translated.length;
+    const options = usable ? translated : q.options;
+    return { ...q, text, options, correctAnswer: options[q.answerIndex] };
+  }
+  const displayAnswer = (typeof tr.answer === "string" && tr.answer.trim()) ? tr.answer : q.correctAnswer;
+  const extra = normalizeAnswer(displayAnswer);
+  const accepted = extra && !q.accepted.includes(extra) ? [...q.accepted, extra] : q.accepted;
+  return { ...q, text, displayAnswer, accepted };
 }
 
 async function translateQuestion(q){
   if (lang === "en") return q;
-  if (q.type === "choice"){
-    const [tText, ...tOptions] = await Promise.all([
-      translateOne(q.text, lang), // the connective question text always translates - it's prose, not a name
-      ...q.options.map(o => translateUnlessProperNoun(o, lang)),
-    ]);
-    return { ...q, text: tText, options: tOptions, correctAnswer: tOptions[q.answerIndex] };
-  }
-  const [tText, tAnswer] = await Promise.all([
-    translateOne(q.text, lang),
-    translateUnlessProperNoun(q.correctAnswer, lang),
-  ]);
-  const extra = normalizeAnswer(tAnswer);
-  const accepted = extra && !q.accepted.includes(extra) ? [...q.accepted, extra] : q.accepted;
-  return { ...q, text: tText, displayAnswer: tAnswer, accepted };
+  await loadLocaleBank(lang); // usually already resolved - applyLanguage() starts it at boot
+  return applyTranslation(q, await resolveTranslation(q));
 }
 
 /* ============================================================
@@ -1833,18 +2186,70 @@ async function translateQuestion(q){
    ============================================================ */
 const SETTINGS_KEY = "answerit_settings";
 const PB_KEY = "answerit_pb";
-const SEEN_KEY = "answerit_seen";
-const SEEN_CAP = 150; // remembers roughly this many recently-served questions across rounds so
-// a rematch doesn't just redraw the same small curated bucket (§ repetition complaint)
+const SEEN_KEY = "answerit_seen_v2"; // v1 was a bare array of provider ids. v2 is
+// { contentKey: lastServedAt }, so a bucket can be sorted by *how long ago* a question was
+// served rather than only by whether it ever was - see the sort at the end of buildPool().
+const SEEN_CAP = 600;  // ~40 rounds of history, comfortably deeper than the whole curated bank
+const SEEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // after a month a question is worth seeing again
 function loadSeen(){
-  try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || []; } catch { return []; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(SEEN_KEY));
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return new Map();
+    const cutoff = Date.now() - SEEN_TTL_MS;
+    return new Map(Object.entries(raw).filter(([, ts]) => typeof ts === "number" && ts > cutoff));
+  } catch { return new Map(); }
 }
-function markSeen(ids){
-  if (!ids.length) return;
-  let arr = loadSeen().filter(id => !ids.includes(id)); // drop old occurrences, they get re-pushed to the end (most recent)
-  arr.push(...ids);
-  if (arr.length > SEEN_CAP) arr = arr.slice(arr.length - SEEN_CAP);
-  try { localStorage.setItem(SEEN_KEY, JSON.stringify(arr)); } catch {}
+function saveSeen(map){
+  let entries = [...map.entries()].sort((a,b) => a[1] - b[1]); // oldest first, so the cap drops those
+  if (entries.length > SEEN_CAP) entries = entries.slice(entries.length - SEEN_CAP);
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(Object.fromEntries(entries))); } catch {}
+}
+// Called the moment a question goes on screen, NOT when the round finishes. Quitting half way
+// through, or reloading the tab, still counts as having seen what you saw - marking only at the
+// podium meant an abandoned round left no trace at all, so "play again" straight afterwards
+// served the very same questions back. That was the loudest half of the repetition complaint.
+function markSeen(keys){
+  const list = (Array.isArray(keys) ? keys : [keys]).filter(Boolean);
+  if (!list.length) return;
+  const map = loadSeen();
+  const now = Date.now();
+  for (const k of list) map.set(k, now);
+  saveSeen(map);
+}
+try { localStorage.removeItem("answerit_seen"); } catch {} // v1 ids can never match a v2 key
+
+/* Questions the APIs handed over in an earlier round and that were never actually shown. Both
+   sources return a random sample skewed toward the same popular material, so "fetch again" is
+   not the same thing as "get different questions" - but the tail of the previous fetch really is
+   different, and it is sitting right there unused at the end of every round. Keeping it costs
+   one localStorage write and saves both a network round trip and, more to the point, the
+   repetition that comes from re-sampling the same slice.
+   Curated questions are deliberately excluded: they are already in bank/curated-core.js, so
+   storing them again would just spend the quota on questions we always have anyway. */
+const CARRYOVER_KEY = "answerit_pool_carryover";
+const CARRYOVER_CAP = 400;
+function loadCarryover(){
+  try { const a = JSON.parse(localStorage.getItem(CARRYOVER_KEY)); return Array.isArray(a) ? a : []; }
+  catch { return []; }
+}
+function saveCarryover(list){
+  try { localStorage.setItem(CARRYOVER_KEY, JSON.stringify(list.slice(-CARRYOVER_CAP))); } catch {}
+}
+// Everything still in the pool when a round ends is, by definition, a question nobody saw:
+// makeRoundSession splices each question out of its bucket as it draws it.
+function carryOverUnserved(pool){
+  if (!pool) return;
+  const out = [];
+  for (const c of Object.keys(pool)){
+    for (const L of ["easy","medium","hard"]){
+      for (const q of pool[c][L] || []){
+        if (q.source === "custom") continue;
+        const { _seenAt, ...rest } = q; // freshness is recomputed against the seen store next time
+        out.push(rest);
+      }
+    }
+  }
+  saveCarryover(out);
 }
 function loadSettings(){
   let s = null;
@@ -2019,6 +2424,7 @@ function showInterstitial(kind, q){
 
 function showQuestion(q){
   R.current = q; R.locked = false;
+  markSeen(q.key); // on screen = seen, whatever happens to the round from here
   show("screen-question");
   const chip = $("qLevelChip");
   chip.textContent = levelName(q.level) + (q.isDouble ? " ×2" : "");
@@ -2183,7 +2589,7 @@ on($("revealNext"), "click", nextFromReveal);
    Podium
    ============================================================ */
 function finishRound(){
-  markSeen(R.session.servedIds);
+  carryOverUnserved(R.pool);
   const pb = loadPB();
   let isNewOverall = R.score > (pb.overall||0);
   if (isNewOverall) pb.overall = R.score;

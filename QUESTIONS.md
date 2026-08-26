@@ -26,14 +26,19 @@ sets: they are a good **volume** source and a poor **quality** source. So they w
 round = 60% curated core  +  40% API filler that survived the gate
 ```
 
-- **Curated core** — `bank/curated-core.js`, 235 hand-written questions across all 10 categories,
-  every level, every one written to be answerable by a general adult crowd. 77% of them are not
-  US/UK material. This is the part that decides whether a game is fun.
+- **Curated core** — `bank/curated-core.js` (235) plus `bank/curated-extra.js` (270): 505
+  hand-written questions across all 10 categories, every level, every one written to be
+  answerable by a general adult crowd. 78% of them are not US/UK material. This is the part that
+  decides whether a game is fun. The two files concat onto the same global, so the split is
+  purely about keeping diffs readable - add to either.
 - **API filler** — everything else, but only after `gradeQuestion()` in `worker/src/quality.js`
   says yes. It also carries a score, and buckets are sorted best-first so the weakest survivors
   are only ever reached if a bucket runs dry.
 - **The 60/40 split is deliberate, in both directions.** Leaning harder on curated would just
-  swap "obscure questions" for "the same 235 questions every night".
+  swap "obscure questions" for "the same questions every night". Note the split is a preference,
+  not a rule: when one side has no questions left that this player has not already seen and the
+  other does, `pickQualityIndex()` takes the fresh side regardless (see the repetition notes in
+  `index.html`). A fresh API question beats a curated repeat.
 
 Bonus property: a round is now playable with **zero network**. The curated bank is loaded from
 disk before the first fetch, so if both APIs are down or rate-limited the game still starts.
@@ -72,8 +77,8 @@ sorted to the bottom.
 
 ## 4. Adding questions
 
-Open `bank/curated-core.js` and add a row to any block. Compact keys keep the file small — it
-ships to every player:
+Open `bank/curated-core.js` or `bank/curated-extra.js` and add a row to any block. Compact keys
+keep the files small — they ship to every player:
 
 ```js
 { c:"history", l:"medium", t:"Nigeria gained independence from Britain in which year?",
@@ -112,7 +117,8 @@ Every curated row must pass the same gate the APIs face — that's the point of 
 
 | File | Role |
 |---|---|
-| `bank/curated-core.js` | the questions. Classic `<script>`, sets `globalThis.ANSWER_IT_CURATED`, so one file works over `file://` **and** as a side-effect import in the Worker |
+| `bank/curated-core.js`, `bank/curated-extra.js` | the questions. Classic `<script>`s that concat onto `globalThis.ANSWER_IT_CURATED`, so they work over `file://` **and** as side-effect imports in the Worker |
+| `bank/curated-ar.js`, `bank/curated-fr.js` | hand-written Arabic and French for every curated question, keyed by the exact English question text. Lazy-loaded only when that language is picked |
 | `worker/src/quality.js` | the gate, de-dupe, curated normaliser, and `mixPool()` |
 | `index.html` | mirrors the gate inline (same hand-sync rule as the game core) and seeds its solo pool from the curated bank before fetching |
 
@@ -123,8 +129,9 @@ Keep the inline mirror in `index.html` in sync with `worker/src/quality.js` by h
 
 In rough order of payoff:
 
-1. **Write more curated questions.** 235 is a good evening; ~600 is a season. The format is
-   deliberately trivial to append to.
+1. **Write more curated questions.** 505 is a season; ~1,000 would be a year. The format is
+   deliberately trivial to append to. A new row needs a matching entry in `bank/curated-ar.js`
+   and `bank/curated-fr.js` — `node check.mjs` reports any that are missing.
 2. **Themed packs** — a Naija pack, an Afrobeats pack, a football pack — selectable at room
    setup. Same row format, one file each.
 3. **Let hosts add questions** to their own room. The best party trivia is local.

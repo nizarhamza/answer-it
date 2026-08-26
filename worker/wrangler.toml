@@ -1,0 +1,30 @@
+name = "answer-it-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Workers AI. 10,000 neurons/day free on both the Workers Free and Paid plans - roughly 1,500
+# whole-question translations a day, and each question is only ever translated once because of
+# the KV cache below. Going over does not bill you on the Free plan; the call simply fails and
+# the client falls back to MyMemory and then to English.
+[ai]
+binding = "AI"
+
+# Translation cache. Create the namespace once, then paste the id it prints:
+#   npx wrangler kv namespace create TRANSLATIONS
+# Free plan: 100,000 reads/day, 1,000 writes/day, 1 GB. Reads are nowhere near binding (a
+# 15-question round is ~15 of them); writes only happen on a cache miss, and a write that fails
+# because the daily cap is spent is caught and ignored - the translation is still served.
+[[kv_namespaces]]
+binding = "TRANSLATIONS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+# Multiplayer rooms are not built yet (ANSWER-IT.md §16). When they are, this is where the
+# Durable Object binding goes - SQLite-backed, which is what makes it work on the free plan:
+#
+# [[durable_objects.bindings]]
+# name = "ROOMS"
+# class_name = "Room"
+#
+# [[migrations]]
+# tag = "v1"
+# new_sqlite_classes = ["Room"]

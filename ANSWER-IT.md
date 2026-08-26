@@ -309,17 +309,21 @@ in before launch, not after.
 The first playtest failed on question *quality*, not question *supply*: the open APIs skew
 obscure, dry and Anglo-American. They are now treated as a volume source only.
 
-- **`bank/curated-core.js`** — 235 hand-written questions covering all 10 categories and all
-  three source levels, written for a general adult crowd and deliberately spread beyond the
-  US/UK (77% non-Western). The pool is seeded from this file *before* any fetch, so a round is
-  playable with no network at all.
+- **`bank/curated-core.js`** + **`bank/curated-extra.js`** — 505 hand-written questions (235 in
+  the first file, 270 in the second) covering all 10 categories and all three source levels,
+  written for a general adult crowd and deliberately spread beyond the US/UK (78% non-Western).
+  Both files concat onto the same global; the split is only there to keep diffs reviewable. The
+  pool is seeded from them *before* any fetch, so a round is playable with no network at all.
+  Every question also has a hand-written Arabic and French translation in `bank/curated-ar.js`
+  and `bank/curated-fr.js` (§ translation chain).
 - **`worker/src/quality.js`** — `gradeQuestion()` runs on everything an API returns. Hard
   rejects: paper-quiz phrasing, domestic-league/soap material, blocked tags, coin-flip year
   options, duplicate options, answer leaks, unwieldy answers, niche below `hard`. Survivors get
   a 0-100 score; buckets are sorted best-first and `MIN_BANK_SCORE` (66) is the floor for
   entering the KV bank. Measured live: ~32% of a Trivia API batch is rejected.
 - **The mix is ~60% curated / 40% filtered filler** (`DEFAULT_CURATED_SHARE`). Not 100% curated:
-  that would trade "obscure" for "the same 235 questions every night".
+  that would trade "obscure" for "the same questions every night" - though at 505 curated
+  questions, roughly 16-19 per (category, level) bucket, that is now a much longer night.
 
 Full write-up, the reject table, and the house rules for writing new questions: **QUESTIONS.md**.
 
