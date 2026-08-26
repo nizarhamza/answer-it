@@ -32,7 +32,7 @@ function newPlayer(id, nickname, role = "player") {
 function defaultSettings() {
   return {
     n: 15, categories: ["mix"], style: "mixed", intensity: "adaptive",
-    streaks: true, hellInsurance: false, extended: false, teams: 0, revealPace: "auto",
+    streaks: true, hellInsurance: false, extended: false, teams: 0, revealPace: "host",
   };
 }
 function resolveCategories(categories) {
@@ -234,7 +234,7 @@ export class Room {
       hellInsurance: data.hellInsurance !== undefined ? !!data.hellInsurance : s.hellInsurance,
       extended: data.extended !== undefined ? !!data.extended : s.extended,
       teams: Number.isInteger(data.teams) ? Math.max(0, Math.min(6, data.teams)) : s.teams,
-      revealPace: data.revealPace === "host" ? "host" : "auto",
+      revealPace: ["auto", "host"].includes(data.revealPace) ? data.revealPace : s.revealPace,
     };
     if (data.judgeOnlyHost !== undefined) room.judgeOnlyHost = !!data.judgeOnlyHost;
     this.syncTeams(room);
