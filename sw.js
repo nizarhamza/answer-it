@@ -5,7 +5,7 @@
 //
 // Bump CACHE's version suffix whenever core assets change meaningfully, so returning players
 // pick up the new shell instead of a stale one lingering behind stale-while-revalidate.
-const CACHE = "answer-it-v2";
+const CACHE = "answer-it-v3";
 const CORE_ASSETS = [
   // "./" only - never "./index.html". Cloudflare Pages 308-redirects "/index.html" -> "/", and
   // a redirected Response can't be cache.put()'d (it rejects addAll wholesale) nor handed to
