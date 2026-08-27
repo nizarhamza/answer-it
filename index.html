@@ -323,10 +323,18 @@ p{margin:0}
 #screen-room-home .btn-lg + .link-btn{margin-top:18px;display:inline-block}
 .roomcode{font-family:"Fredoka";font-weight:700;font-size:clamp(36px,10vw,52px);letter-spacing:.08em;text-align:center;color:var(--accent);cursor:pointer;user-select:all}
 .roomcode-hint{text-align:center;font-size:12.5px;color:var(--muted)}
-.qr-wrap{display:flex;justify-content:center;margin:16px 0 4px}
-.qr-wrap:empty{display:none}
-.qr-wrap svg{width:min(180px,60vw);height:auto;background:#fff;border-radius:12px;padding:10px;box-shadow:var(--shadow-card)}
-#lobbyShareBtn{width:100%;margin-top:12px}
+.roomcode-row{display:flex;align-items:center;justify-content:center;gap:14px}
+#lobbyQrBtn{flex:none;background:var(--accent);color:var(--on-accent)}
+#lobbyQrBtn .icon{width:22px;height:22px}
+.qr-wrap{display:flex;justify-content:center;margin:8px 0 14px}
+.qr-wrap svg{width:min(280px,72vw);height:auto;background:#fff;border-radius:12px;padding:12px;box-shadow:var(--shadow-card)}
+#lobbyShareBtn{width:100%;margin-top:14px}
+#roomScanBtn{margin-top:12px}
+#scanOverlay{position:fixed;inset:0;z-index:200;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+#scanVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scan-frame{position:relative;width:min(72vw,300px);aspect-ratio:1;border:3px solid #fff;border-radius:20px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)}
+.scan-hint{position:relative;color:#fff;font-weight:600;text-align:center;padding:0 28px;max-width:340px}
+#scanCancelBtn{position:relative;background:#fff;color:#000;min-width:140px}
 .codeinputs{display:flex;gap:9px;justify-content:center}
 .codeinputs input{width:46px;height:56px;text-align:center;font-size:23px;font-weight:700;border-radius:var(--radius-sm);border:2px solid var(--line);background:var(--sunk);color:var(--text);font-family:"Fredoka",inherit}
 .codeinputs input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--focus)}
@@ -418,6 +426,13 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
 <body>
 <canvas id="fx" class="hide"></canvas>
 <div id="toast-wrap" aria-live="polite"></div>
+
+<div id="scanOverlay" class="hide" role="dialog" aria-modal="true">
+  <video id="scanVideo" playsinline muted></video>
+  <div class="scan-frame"></div>
+  <p class="scan-hint" data-i18n="scanQrHint"></p>
+  <button class="btn" id="scanCancelBtn" data-i18n="cancel"></button>
+</div>
 
 <div id="app">
 
@@ -677,6 +692,7 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
         <div class="codeinputs" id="roomJoinInputs"></div>
         <p class="notice hide" id="roomEntryMsg"></p>
         <button class="btn btn-lg" id="roomJoinBtn" data-i18n="joinRoomBtn"></button>
+        <button class="btn btn-lg hide" id="roomScanBtn"><span data-icon="qrCode"></span> <span data-i18n="scanQrBtn"></span></button>
         <button class="link-btn" id="roomBigscreenBtn" data-i18n="bigscreenBtn"></button>
       </div>
     </div>
@@ -691,9 +707,11 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
     </div>
     <div class="wrap">
       <div class="card" style="text-align:center">
-        <div class="roomcode" id="lobbyCode" title="">------</div>
+        <div class="roomcode-row">
+          <div class="roomcode" id="lobbyCode" title="">------</div>
+          <button class="iconbtn" id="lobbyQrBtn" data-icon="qrCode" data-i18n-aria="showQr"></button>
+        </div>
         <p class="roomcode-hint" id="lobbyCodeHint" data-i18n="tapToCopy"></p>
-        <div class="qr-wrap" id="lobbyQr"></div>
         <button class="btn" id="lobbyShareBtn"><span data-icon="share2"></span> <span data-i18n="inviteBtn"></span></button>
       </div>
 
@@ -1006,6 +1024,7 @@ const ICONS = {
   moonStar: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /><path d="M19 3v4" /><path d="M21 5h-4" />',
   logOut: '<path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />',
   share2: '<circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />',
+  qrCode: '<rect width="5" height="5" x="3" y="3" rx="1" /><rect width="5" height="5" x="16" y="3" rx="1" /><rect width="5" height="5" x="3" y="16" rx="1" /><path d="M21 16h-3a2 2 0 0 0-2 2v3" /><path d="M21 21v.01" /><path d="M12 7v3a2 2 0 0 1-2 2H7" /><path d="M3 12h.01" /><path d="M12 3h.01" /><path d="M12 16v.01" /><path d="M16 12h1" /><path d="M21 12v.01" /><path d="M12 21v-1" />',
 };
 function icon(name, cls){
   return `<svg class="icon${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||""}</svg>`;
@@ -1038,7 +1057,10 @@ en: { dir:"ltr", langName:"English",
   couldntReachServer:"Couldn't reach the game server. Check your connection and try again.",
   couldntJoinRoom:"Couldn't join that room - check the code, or it may not exist any more.",
   lobbyTitle:"Lobby", tapToCopy:"Tap the code to copy it", playersTitle:"Players",
-  inviteBtn:"Invite players", inviteLinkCopied:"Invite link copied", copyLink:"Copy link",
+  inviteBtn:"Invite players", inviteLinkCopied:"Invite link copied",
+  showQr:"Show QR code", scanQrBtn:"Scan QR code",
+  scanToJoinTitle:"Scan to join", scanToJoinHint:"Point a phone camera at this to join the room.",
+  scanQrHint:"Point your camera at a room's QR code", cameraUnavailable:"Couldn't open the camera",
   shareInviteText:(code)=>`Join my Answer It room - code ${code}`,
   pickYourTeam:"Pick your team", teamsLabel:"Teams", teamsOff:"Off",
   revealPaceLabel:"Reveal pace", revealPaceAuto:"Auto (5s)", revealPaceHost:"Host clicks Next",
@@ -1136,7 +1158,10 @@ fr: { dir:"ltr", langName:"Français",
   couldntReachServer:"Impossible de joindre le serveur de jeu. Vérifiez votre connexion et réessayez.",
   couldntJoinRoom:"Impossible de rejoindre cette salle - vérifiez le code, ou elle n'existe peut-être plus.",
   lobbyTitle:"Salle d'attente", tapToCopy:"Touchez le code pour le copier", playersTitle:"Joueurs",
-  inviteBtn:"Inviter des joueurs", inviteLinkCopied:"Lien d'invitation copié", copyLink:"Copier le lien",
+  inviteBtn:"Inviter des joueurs", inviteLinkCopied:"Lien d'invitation copié",
+  showQr:"Afficher le QR code", scanQrBtn:"Scanner un QR code",
+  scanToJoinTitle:"Scanner pour rejoindre", scanToJoinHint:"Pointez l'appareil photo d'un téléphone dessus pour rejoindre la salle.",
+  scanQrHint:"Pointez votre caméra vers le QR code d'une salle", cameraUnavailable:"Impossible d'ouvrir la caméra",
   shareInviteText:(code)=>`Rejoins ma salle Answer It - code ${code}`,
   pickYourTeam:"Choisissez votre équipe", teamsLabel:"Équipes", teamsOff:"Désactivées",
   revealPaceLabel:"Rythme de révélation", revealPaceAuto:"Auto (5s)", revealPaceHost:"L'hôte clique sur Suivant",
@@ -1234,7 +1259,10 @@ ar: { dir:"rtl", langName:"العربية",
   couldntReachServer:"تعذّر الوصول إلى خادم اللعبة. تحقق من اتصالك وحاول مجددًا.",
   couldntJoinRoom:"تعذّر الانضمام إلى هذه الغرفة - تحقق من الرمز، أو ربما لم تعد موجودة.",
   lobbyTitle:"غرفة الانتظار", tapToCopy:"اضغط على الرمز لنسخه", playersTitle:"اللاعبون",
-  inviteBtn:"دعوة لاعبين", inviteLinkCopied:"تم نسخ رابط الدعوة", copyLink:"نسخ الرابط",
+  inviteBtn:"دعوة لاعبين", inviteLinkCopied:"تم نسخ رابط الدعوة",
+  showQr:"عرض رمز QR", scanQrBtn:"مسح رمز QR",
+  scanToJoinTitle:"امسح للانضمام", scanToJoinHint:"وجّه كاميرا الهاتف نحوه للانضمام إلى الغرفة.",
+  scanQrHint:"وجّه الكاميرا نحو رمز QR الخاص بالغرفة", cameraUnavailable:"تعذّر فتح الكاميرا",
   shareInviteText:(code)=>`انضم إلى غرفتي في Answer It - الرمز ${code}`,
   pickYourTeam:"اختر فريقك", teamsLabel:"الفرق", teamsOff:"معطّلة",
   revealPaceLabel:"وتيرة الكشف", revealPaceAuto:"تلقائي (5 ثوانٍ)", revealPaceHost:"المضيف يضغط التالي",
@@ -3310,6 +3338,7 @@ on($("menuCredits"), "click", () => openModal(`
    Keyboard controls (§19)
    ============================================================ */
 document.addEventListener("keydown", (e) => {
+  if (!$("scanOverlay").classList.contains("hide") && e.key==="Escape"){ rmStopScan(); return; }
   if (!$("modalScrim").classList.contains("hide") && e.key==="Escape"){ closeModal(); return; }
   if ($("screen-question").classList.contains("active") && !R?.locked){
     if (["1","2","3","4"].includes(e.key) && $("qOptions").classList.contains("hide")===false){
@@ -3602,10 +3631,15 @@ function rmIsHost(){ return !!RM.state && RM.state.hostId===RM.me.id; }
 function rmMyRole(){ return RM.state?.you?.role || "player"; }
 
 /* ---------------- invite / share ---------------- */
-// Deep link that drops the recipient straight into this room (parsed on boot by
-// rmConsumeInviteCode). Empty on file:// - there's no meaningful origin to link to.
+// Where a shared link points. Normally this exact deployment (origin + path), so custom
+// domains work for free; falls back to the canonical site when there's no real origin to
+// use - opened from file://, or a sandboxed context where location.origin is "null".
+const RM_SITE_URL = "https://answer-it.pages.dev/";
 function rmInviteUrl(code){
-  return location.protocol === "file:" ? "" : location.origin + location.pathname + "?join=" + code;
+  const base = (location.protocol === "file:" || location.origin === "null")
+    ? RM_SITE_URL
+    : location.origin + location.pathname;
+  return base + "?join=" + code;
 }
 async function rmShareInvite(){
   const code = RM.state?.code || RM.code || "";
@@ -3620,42 +3654,16 @@ async function rmShareInvite(){
       return;
     } catch (e){
       if (e && e.name === "AbortError") return;   // user dismissed the sheet
-      // any other failure -> fall through to the manual menu
+      // any other failure -> fall through to copy
     }
   }
-  rmShareMenu(url, text, code);
-}
-// Fallback for browsers without navigator.share (most desktop Firefox/Safari): a menu of
-// per-app deep links. Instagram/Messenger have no web share URL, so they only show up in
-// the native sheet above - not here.
-function rmShareMenu(url, text, code){
-  const shareStr = url ? `${text} ${url}` : `${text} ${code}`;
-  const u = encodeURIComponent(url || "");
-  const s = encodeURIComponent(shareStr);
-  const tx = encodeURIComponent(text);
-  const targets = url ? [
-    { label:"WhatsApp", href:`https://wa.me/?text=${s}` },
-    { label:"Telegram", href:`https://t.me/share/url?url=${u}&text=${tx}` },
-    { label:"Facebook", href:`https://www.facebook.com/sharer/sharer.php?u=${u}` },
-    { label:"X",        href:`https://twitter.com/intent/tweet?text=${tx}&url=${u}` },
-    { label:"Email",    href:`mailto:?subject=Answer%20It&body=${s}` },
-  ] : [];
-  openModal(`
-    <h2>${esc(t("inviteBtn"))}</h2>
-    <div style="display:flex;flex-direction:column;gap:8px;margin:14px 0">
-      ${targets.map(x => `<a class="btn" href="${x.href}" target="_blank" rel="noopener">${esc(x.label)}</a>`).join("")}
-      <button class="btn btn-primary" id="shareCopyBtn"><span>${icon("share2")}</span> ${esc(t("copyLink"))}</button>
-    </div>
-    <div style="text-align:end"><button class="btn" id="shareMenuClose">${esc(t("close"))}</button></div>
-  `);
-  on($("shareMenuClose"), "click", closeModal);
-  on($("shareCopyBtn"), "click", () => {
-    const toCopy = url || code;
-    if (navigator.clipboard) navigator.clipboard.writeText(toCopy).then(() => {
-      toast(t(url ? "inviteLinkCopied" : "tapToCopy") + " ✓");
-      closeModal();
-    }).catch(() => {});
-  });
+  // No share sheet (desktop Firefox/Safari, file://): just copy the invite link.
+  const toCopy = url || code;
+  if (navigator.clipboard){
+    navigator.clipboard.writeText(toCopy)
+      .then(() => toast(t(url ? "inviteLinkCopied" : "tapToCopy") + " ✓"))
+      .catch(() => {});
+  }
 }
 // ?join=NNNNNN -> the 6-digit code, then strip it from the address bar so a refresh or a
 // PWA relaunch doesn't re-trigger the join (and the code isn't left sitting in the URL).
@@ -3670,6 +3678,102 @@ function rmConsumeInviteCode(){
     }
   } catch {}
   return code && /^\d{6}$/.test(code) ? code : null;
+}
+// Pull a room code out of whatever a QR scanner handed us: a full invite link, or a bare code.
+function rmCodeFromScan(raw){
+  if (!raw) return null;
+  const m = String(raw).match(/[?&]join=(\d{6})(?:\b|$)/) || String(raw).trim().match(/^(\d{6})$/);
+  return m ? m[1] : null;
+}
+
+/* ---------------- QR popup + camera scan ---------------- */
+function rmShowQrModal(){
+  const code = RM.state?.code || RM.code || "";
+  if (!/^\d{6}$/.test(code)) return;
+  openModal(`
+    <h2 style="text-align:center;margin-bottom:4px">${esc(t("scanToJoinTitle"))}</h2>
+    <div class="qr-wrap">${rmQrSvg(rmInviteUrl(code) || code, 280)}</div>
+    <div class="roomcode" style="font-size:34px">${esc(code)}</div>
+    <p class="roomcode-hint" style="margin-bottom:16px">${esc(t("scanToJoinHint"))}</p>
+    <div style="text-align:center"><button class="btn btn-primary" id="qrModalClose">${esc(t("close"))}</button></div>
+  `);
+  on($("qrModalClose"), "click", closeModal);
+}
+
+// getUserMedia needs a secure context; jsQR is our decoder fallback where BarcodeDetector is
+// missing (iOS Safari, desktop Firefox). Hidden entirely when neither camera nor decoder can run.
+const rmScanSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) &&
+  (window.isSecureContext || location.protocol === "file:");
+let rmScan = null;
+
+function rmLoadJsQR(){
+  if (window.jsQR) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "vendor/jsqr.min.js";
+    s.onload = res;
+    s.onerror = () => rej(new Error("jsqr load failed"));
+    document.head.appendChild(s);
+  });
+}
+async function rmStartScan(){
+  if (rmScan) return;
+  const video = $("scanVideo");
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  } catch { toast(t("cameraUnavailable")); return; }
+
+  let detector = null;
+  if ("BarcodeDetector" in window){
+    try { detector = new window.BarcodeDetector({ formats: ["qr_code"] }); } catch {}
+  }
+  if (!detector){
+    try { await rmLoadJsQR(); }
+    catch { stream.getTracks().forEach(t => t.stop()); toast(t("cameraUnavailable")); return; }
+  }
+
+  rmScan = { stream, raf: 0, stopped: false };
+  $("scanOverlay").classList.remove("hide");
+  video.srcObject = stream;
+  try { await video.play(); } catch {}
+
+  const jsQR = window.jsQR && (window.jsQR.default || window.jsQR);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  const tick = async () => {
+    if (!rmScan || rmScan.stopped) return;
+    if (video.readyState >= 2){
+      let raw = null;
+      try {
+        if (detector){
+          const found = await detector.detect(video);
+          raw = found[0] && found[0].rawValue;
+        } else {
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const r = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+          raw = r && r.data;
+        }
+      } catch {}
+      if (!rmScan || rmScan.stopped) return;   // cancelled while a detect() was in flight
+      const code = rmCodeFromScan(raw);
+      if (code){ rmStopScan(); rmConnect(code, { spectator: false }); return; }
+    }
+    rmScan.raf = requestAnimationFrame(tick);
+  };
+  tick();
+}
+function rmStopScan(){
+  if (!rmScan) return;
+  rmScan.stopped = true;
+  cancelAnimationFrame(rmScan.raf);
+  rmScan.stream.getTracks().forEach(t => t.stop());
+  rmScan = null;
+  $("scanVideo").srcObject = null;
+  $("scanOverlay").classList.add("hide");
 }
 
 /* ---------------- entry screen ---------------- */
@@ -3719,6 +3823,7 @@ function rmShowHome(){
   $("roomHomeName").textContent = RM.me.nickname;
   rmBuildCodeInputs();
   rmEntryMsg("");
+  $("roomScanBtn").classList.toggle("hide", !rmScanSupported);
   show("screen-room-home");
 }
 function rmSubmitName(){
@@ -3758,6 +3863,9 @@ function rmJoin(){
 }
 on($("roomCreateBtn"), "click", rmCreate);
 on($("roomJoinBtn"), "click", rmJoin);
+on($("roomScanBtn"), "click", rmStartScan);
+on($("scanCancelBtn"), "click", rmStopScan);
+on($("scanOverlay"), "click", e => { if (e.target === $("scanOverlay")) rmStopScan(); });
 on($("roomBigscreenBtn"), "click", () => {
   const code = rmReadCode();
   if (code.length!==6){ rmEntryMsg(t("enterCode")); return; }
@@ -3929,10 +4037,6 @@ function rmRenderLobby(){
   const s = RM.state; if (!s) return;
   const code = s.code || RM.code;
   $("lobbyCode").textContent = code;
-  // QR of the invite link - re-encoded only when the code changes, not on every state push.
-  const qr = $("lobbyQr"), inviteUrl = rmInviteUrl(code);
-  if (!inviteUrl) qr.innerHTML = "";
-  else if (qr.dataset.code !== code){ qr.innerHTML = rmQrSvg(inviteUrl, 200); qr.dataset.code = code; }
   $("lobbyPlayers").innerHTML = Object.values(s.players).map(p => `
     <div class="prow ${p.connected?"":"offline"} ${p.id===RM.me.id?"me":""}">
       ${s.teams[p.teamId] ? `<span class="teamdot" style="background:${s.teams[p.teamId].color}"></span>` : ""}
@@ -4012,6 +4116,7 @@ on($("lobbyCode"), "click", () => {
   if (navigator.clipboard) navigator.clipboard.writeText(code).then(()=>toast(t("tapToCopy")+" ✓")).catch(()=>{});
 });
 on($("lobbyShareBtn"), "click", rmShareInvite);
+on($("lobbyQrBtn"), "click", rmShowQrModal);
 
 /* ---------------- question ---------------- */
 function rmOnQuestion(data){
