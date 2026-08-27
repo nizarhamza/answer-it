@@ -16,11 +16,19 @@
    because the result is cached in KV. English rounds cost nothing at all.
    ============================================================ */
 
+// Side-effect imports, same trick as bank.js: these classic scripts assign
+// globalThis.ANSWER_IT_BANK_AR / _FR rather than exporting, so the same files that back index.html's
+// tier-0 lookup (localeBankTranslation()) are reachable here too, bundled straight into the Worker.
+import "../../bank/curated-ar.js";
+import "../../bank/curated-fr.js";
+
 const MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 const CACHE_VERSION = "v1"; // bump to invalidate every cached translation at once
 const CACHE_TTL_S = 60 * 60 * 24 * 90; // 90 days
 export const MAX_BATCH = 20;
 const MAX_TEXT = 400;
+const AI_RETRIES = 1; // one extra attempt on a validation failure - most misses are a formatting
+// slip (prose around the JSON, a collided option) rather than the model being wrong twice in a row
 
 // Per-language instruction for how names should be handled. This mirrors what the hand-written
 // locale banks (bank/curated-ar.js, bank/curated-fr.js) already do, so the two tiers do not
@@ -84,6 +92,9 @@ function buildMessages(lang, q) {
       : "- The answer must remain a correct answer to the translated question.",
     `- ${L.properNouns}`,
     "- Leave numbers, years, chemical symbols and units exactly as they are.",
+    "- Accuracy over fluency: translate the meaning that is actually correct here, not the most " +
+      "natural-sounding guess. If a word is genuinely ambiguous even with this context, translate " +
+      "its ordinary trivia-answer sense rather than inventing one.",
     "- Keep every option short: they are shown in a four-button grid on a phone.",
     "- Do not answer the question, do not explain, do not add commentary.",
     "",
@@ -155,17 +166,25 @@ function validate(lang, q, parsed) {
 }
 
 async function translateOne(env, lang, q) {
-  let out;
-  try {
-    out = await env.AI.run(MODEL, {
-      messages: buildMessages(lang, q),
-      max_tokens: 600,
-      temperature: 0.2, // translation, not invention
-    });
-  } catch {
-    return null; // out of neurons, model unavailable, timeout - all the same to the caller
+  for (let attempt = 0; attempt <= AI_RETRIES; attempt++) {
+    let out;
+    try {
+      out = await env.AI.run(MODEL, {
+        messages: buildMessages(lang, q),
+        max_tokens: 600,
+        temperature: 0.2, // translation, not invention
+      });
+    } catch {
+      return null; // out of neurons, model unavailable, timeout - all the same to the caller, and
+      // not worth a retry since the next attempt would fail the same way
+    }
+    const value = validate(lang, q, extractJson(out?.response ?? out?.result?.response ?? out));
+    if (value) return value;
+    // A validation miss here is usually a one-off formatting slip (prose around the JSON, two
+    // options colliding) rather than the model being wrong about the language twice running -
+    // temperature is already low, so a plain retry (no prompt change) clears most of them.
   }
-  return validate(lang, q, extractJson(out?.response ?? out?.result?.response ?? out));
+  return null;
 }
 
 /* Translates a batch, cache-first. Returns { results, meta }; a question that could not be
@@ -197,6 +216,52 @@ export async function translateBatch(env, lang, questions) {
   }));
 
   return { results, meta };
+}
+
+const CURATED_BANK_VAR = { ar: "ANSWER_IT_BANK_AR", fr: "ANSWER_IT_BANK_FR" };
+
+// Tier 0 of a room's translation chain, mirroring index.html's localeBankTranslation(): the same
+// hand-written locale bank, keyed by the exact English question text. A hit is instant, free and
+// the only tier whose quality is guaranteed - checked before ever spending a Workers AI call or a
+// KV round trip. Covers curated-core.js's questions only (see bank/curated-ar.js's own header);
+// anything else falls through to translateOne() below.
+function curatedBankTranslation(lang, q) {
+  const bank = globalThis[CURATED_BANK_VAR[lang]];
+  const entry = bank && bank[q.text];
+  if (!entry) return null;
+  const map = entry.o || {};
+  const isChoice = Array.isArray(q.options) && q.options.length > 0;
+  return {
+    text: entry.t,
+    options: isChoice ? q.options.map((o) => map[o] || o) : null,
+    answer: map[q.answer] || q.answer,
+  };
+}
+
+// Translates one multiplayer-room question end to end: the curated bank first, then the Workers
+// AI tier (cache-first, same as translateBatch). Returns null if nothing could be translated - the
+// room falls back to serving that question in English, same "never break a round over a
+// translation" rule every other tier follows. `q` is a room.js question object; only the fields
+// the chain actually needs are read.
+export async function translateRoomQuestion(env, lang, q) {
+  if (!SUPPORTED_LANGS.includes(lang)) return null;
+  const shaped = {
+    key: q.key, text: q.text, category: q.category || "",
+    options: Array.isArray(q.options) ? q.options : [],
+    answer: q.correctAnswer || "",
+  };
+  const fromBank = curatedBankTranslation(lang, shaped);
+  if (fromBank) return fromBank;
+  try {
+    const hit = await env.TRANSLATIONS?.get(cacheKey(lang, shaped.key), { type: "json" });
+    if (hit) return hit;
+  } catch { /* KV unavailable - fall through and translate */ }
+  const value = await translateOne(env, lang, shaped);
+  if (!value) return null;
+  try {
+    await env.TRANSLATIONS?.put(cacheKey(lang, shaped.key), JSON.stringify(value), { expirationTtl: CACHE_TTL_S });
+  } catch { /* write cap or KV outage - serve it anyway */ }
+  return value;
 }
 
 /* Shapes and bounds whatever the client posted. Returns null if the body is unusable. */
