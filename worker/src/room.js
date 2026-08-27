@@ -5,15 +5,17 @@
 // state.storage and is re-read at the top of every handler. See bank.js's header for why its
 // round-session helpers are plain functions rather than closures, for the same reason.
 import {
-  scoreAnswer, comparePlayers, allocateCounts, PROFILES, matchOpenAnswer, LEVELS,
+  scoreAnswer, comparePlayers, allocateCounts, PROFILES, matchOpenAnswer, LEVELS, normalizeAnswer,
 } from "./game-core.js";
 import { buildPool, poolTotal, initSessionState, drawNextQuestion, drawDouble, recordOutcome } from "./bank.js";
 import { CATEGORY_KEYS } from "./sources.js";
+import { translateRoomQuestion, SUPPORTED_LANGS } from "./translate.js";
 
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // §13 - auto-wipe an abandoned room after 2h idle
 const GRACE_MS = 300; // §17 - answers up to 300ms after endsAt still land, at the 0.5x floor
 const REVEAL_AUTO_MS = 5000; // §13 reveal - "Auto (5s)"
 const REVEAL_HOST_TIMEOUT_MS = 60000; // §20 - an AFK host on revealPace:"host" can't hang the room
+const REVEAL_RECHECK_MS = 30000; // how often alarm() re-checks a host who is still connected (below)
 const JUDGING_TIMEOUT_MS = 90000; // same AFK-host principle applied to the judge panel
 const TEAM_NAMES = ["Red", "Blue", "Green", "Amber", "Purple", "Teal"];
 const TEAM_COLORS = ["#b91c1c", "#1d4ed8", "#15803d", "#a16207", "#7c3aed", "#0f766e"];
@@ -34,8 +36,35 @@ function defaultSettings() {
   return {
     n: 15, categories: ["mix"], style: "mixed", intensity: "adaptive", region: "any",
     streaks: true, hellInsurance: false, extended: false, teams: 0, revealPace: "host",
+    questionLang: "en",
   };
 }
+const QUESTION_LANGS = ["en", ...SUPPORTED_LANGS];
+// Applies a { text, options, answer } translation to a freshly-drawn question, or leaves it in
+// English if there was nothing usable. Mirrors index.html's applyTranslation() exactly, because
+// scoring must keep working the same way here: a choice question's correctness is the array
+// POSITION (answerIndex), which this preserves regardless of what the text says, and an open
+// question keeps matching the original English correctAnswer/accepted (matchOpenAnswer's
+// Levenshtein/word checks are tuned around English word shapes) with the translated form appended
+// to accepted[], so typing the answer in either language still matches. `displayAnswer` is what
+// the reveal screen and the judge panel show (see questionPayload/scoreAndReveal below).
+function applyQuestionTranslation(q, tr) {
+  if (!tr) return q;
+  const text = typeof tr.text === "string" && tr.text.trim() ? tr.text : q.text;
+  if (Array.isArray(q.options) && q.options.length) {
+    const translated = Array.isArray(tr.options) ? tr.options : null;
+    const usable = translated && translated.length === q.options.length
+      && translated.every((o) => typeof o === "string" && o.trim())
+      && new Set(translated.map((o) => normalizeAnswer(o))).size === translated.length;
+    const options = usable ? translated : q.options;
+    return { ...q, text, options, correctAnswer: options[q.answerIndex] };
+  }
+  const displayAnswer = typeof tr.answer === "string" && tr.answer.trim() ? tr.answer : q.correctAnswer;
+  const extra = normalizeAnswer(displayAnswer);
+  const accepted = extra && !q.accepted.includes(extra) ? [...q.accepted, extra] : q.accepted;
+  return { ...q, text, displayAnswer, accepted };
+}
+
 function resolveCategories(categories) {
   if (!Array.isArray(categories) || !categories.length || categories.includes("mix")) return [...CATEGORY_KEYS];
   const ok = categories.filter((c) => CATEGORY_KEYS.includes(c));
@@ -228,7 +257,10 @@ export class Room {
     const n = Math.max(MIN_N, Math.min(MAX_N, Number(data.n) || s.n));
     room.settings = {
       n,
-      categories: Array.isArray(data.categories) && data.categories.length ? data.categories.slice(0, 10) : s.categories,
+      // Capped at the real category count, not a hardcoded number: a literal 10 here quietly
+      // made "select all" impossible the moment an 11th category (Islamic Knowledge) existed -
+      // whichever one a host selected last never made it into the stored list.
+      categories: Array.isArray(data.categories) && data.categories.length ? data.categories.slice(0, CATEGORY_KEYS.length) : s.categories,
       style: ["choice", "open", "mixed"].includes(data.style) ? data.style : s.style,
       intensity: ["chill", "standard", "brutal", "adaptive"].includes(data.intensity) ? data.intensity : s.intensity,
       region: REGIONS.includes(data.region) ? data.region : s.region,
@@ -237,6 +269,7 @@ export class Room {
       extended: data.extended !== undefined ? !!data.extended : s.extended,
       teams: Number.isInteger(data.teams) ? Math.max(0, Math.min(6, data.teams)) : s.teams,
       revealPace: ["auto", "host"].includes(data.revealPace) ? data.revealPace : s.revealPace,
+      questionLang: QUESTION_LANGS.includes(data.questionLang) ? data.questionLang : (s.questionLang || "en"),
     };
     if (data.judgeOnlyHost !== undefined) room.judgeOnlyHost = !!data.judgeOnlyHost;
     this.syncTeams(room);
@@ -344,7 +377,21 @@ export class Room {
   }
 
   /* ---------------- the per-question loop ---------------- */
+  // Guarded by an in-memory (not storage-backed - it only needs to survive the width of one call,
+  // never an eviction) flag: two "next" messages arriving back to back (a double-click, or a
+  // manual click racing the reveal's own auto-advance alarm) must serve exactly one question, not
+  // two - the second call is a silent no-op rather than skipping the room ahead a question.
   async serveNextQuestion(room, categoriesArg) {
+    if (this._servingNext) return;
+    this._servingNext = true;
+    try {
+      return await this._serveNextQuestion(room, categoriesArg);
+    } finally {
+      this._servingNext = false;
+    }
+  }
+
+  async _serveNextQuestion(room, categoriesArg) {
     const categories = categoriesArg || resolveCategories(room.settings.categories);
     const pool = await this.state.storage.get("pool");
     const state = room.sessionState;
@@ -361,6 +408,13 @@ export class Room {
       const drawn = drawNextQuestion(pool, room.settings, state);
       q = drawn.question; notices = drawn.notices;
       if (!q) return this.finishRound(room, "ranOutFresh");
+    }
+
+    const questionLang = room.settings.questionLang || "en";
+    if (questionLang !== "en") {
+      try {
+        q = applyQuestionTranslation(q, await translateRoomQuestion(this.env, questionLang, q));
+      } catch { /* never break a round over a translation - it just serves in English */ }
     }
 
     await this.state.storage.put("pool", pool);
@@ -572,6 +626,15 @@ export class Room {
       return this.scoreAndReveal(room, { disputeAutoResolved: true });
     }
     if (room.status === "playing" && room.phase === "reveal" && room.revealEndsAt && now >= room.revealEndsAt) {
+      // §20's AFK-host safety net exists so a host who has actually left can't hang the room -
+      // not to force-advance a host who is right there reading the answer. A connected host on
+      // revealPace:"host" gets unlimited time; re-arming here (instead of just returning) means a
+      // host who *does* go AFK mid-reveal is still caught within REVEAL_RECHECK_MS, rather than
+      // the room hanging forever because this one-shot alarm already fired and nothing else was
+      // ever going to schedule another.
+      if (room.settings.revealPace === "host" && room.players[room.hostId]?.connected) {
+        return this.state.storage.setAlarm(now + REVEAL_RECHECK_MS);
+      }
       return this.serveNextQuestion(room);
     }
     if (room.status === "finished" || room.status === "lobby") {

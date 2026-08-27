@@ -164,7 +164,11 @@ p{margin:0}
 .section-title{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:10px}
 
 /* ---------------- Segmented control ---------------- */
-.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:var(--pill);padding:4px;gap:4px}
+/* flex-wrap:wrap so a label too long for its row (a translated revealPace option in particular -
+   "L'hôte clique sur Suivant", "المضيف يضغط التالي" - both run well past the English "Host clicks
+   Next") drops to its own line instead of refusing to shrink below its nowrap text width and
+   overlapping the button next to it. */
+.seg{display:flex;flex-wrap:wrap;background:var(--sunk);border:1px solid var(--line);border-radius:var(--pill);padding:4px;gap:4px}
 .seg button{flex:1;border:none;background:transparent;color:var(--muted);padding:10px 12px;border-radius:var(--pill);font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
 .seg button.on{background:var(--accent);color:var(--on-accent)}
 
@@ -734,6 +738,13 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
           <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="regionNote"></p>
         </div>
         <div class="card">
+          <div class="section-title" data-i18n="questionLanguageTitle"></div>
+          <div class="seg" id="lobbySegQLang">
+            <button data-v="en">English</button><button data-v="fr">Français</button><button data-v="ar">العربية</button>
+          </div>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="questionsLanguageNote"></p>
+        </div>
+        <div class="card">
           <div class="togglerow">
             <div><div class="lbl" data-i18n="streaksLabel"></div></div>
             <label class="switch"><input type="checkbox" id="lobbyToggleStreaks" checked><span class="track"><span class="knob"></span></span></label>
@@ -746,7 +757,10 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
           </div>
           <div class="togglerow">
             <div><div class="lbl" data-i18n="revealPaceLabel"></div></div>
-            <div class="seg" id="lobbySegPace" style="max-width:220px">
+            <!-- No max-width here (unlike lobbySegTeams above): "Host clicks Next" fits in 220px,
+                 but its FR/AR translations don't - capping the width just forced them to overlap
+                 rather than wrap. Sized to its own content instead. -->
+            <div class="seg" id="lobbySegPace">
               <button data-v="auto" data-i18n="revealPaceAuto"></button><button data-v="host" data-i18n="revealPaceHost"></button>
             </div>
           </div>
@@ -765,6 +779,11 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
 
   <!-- ============== ROOM: QUESTION ============== -->
   <section class="screen" id="screen-room-question">
+    <div class="topbar">
+      <button class="iconbtn rm-settings-btn" data-icon="settings" data-i18n-aria="roomInfoTitle"></button>
+      <span></span>
+      <button class="iconbtn rm-leave-btn" data-icon="logOut" data-i18n-aria="leaveRoomBtn"></button>
+    </div>
     <div class="wrap" style="gap:14px">
       <div class="qtop">
         <span class="chip chip-level" id="rqLevelChip">EASY</span>
@@ -793,6 +812,11 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
 
   <!-- ============== ROOM: JUDGE PANEL (host only) ============== -->
   <section class="screen" id="screen-room-judge">
+    <div class="topbar">
+      <button class="iconbtn rm-settings-btn" data-icon="settings" data-i18n-aria="roomInfoTitle"></button>
+      <span></span>
+      <button class="iconbtn rm-leave-btn" data-icon="logOut" data-i18n-aria="leaveRoomBtn"></button>
+    </div>
     <div class="wrap" style="gap:14px">
       <h2 data-i18n="judgePanelTitle"></h2>
       <p style="color:var(--muted);font-size:13px" data-i18n="correctAnswerLabel"></p>
@@ -808,6 +832,11 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
 
   <!-- ============== ROOM: REVEAL ============== -->
   <section class="screen" id="screen-room-reveal">
+    <div class="topbar">
+      <button class="iconbtn rm-settings-btn" data-icon="settings" data-i18n-aria="roomInfoTitle"></button>
+      <span></span>
+      <button class="iconbtn rm-leave-btn" data-icon="logOut" data-i18n-aria="leaveRoomBtn"></button>
+    </div>
     <div class="wrap" style="gap:14px" aria-live="polite">
       <div class="qtop">
         <span class="chip chip-level" id="rrLevelChip">EASY</span>
@@ -963,6 +992,7 @@ const ICONS = {
   arrowUp: '<path d="m5 12 7-7 7 7" /><path d="M12 19V5" />',
   arrowDown: '<path d="M12 5v14" /><path d="m19 12-7 7-7-7" />',
   moonStar: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /><path d="M19 3v4" /><path d="M21 5h-4" />',
+  logOut: '<path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />',
 };
 function icon(name, cls){
   return `<svg class="icon${cls?" "+cls:""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||""}</svg>`;
@@ -1002,6 +1032,9 @@ en: { dir:"ltr", langName:"English",
   youAreHost:"You're the host", youAreJudge:"Judging", youAreSpectator:"Spectating",
   roleHost:"Host", roleSpectator:"Spectator", roleOffline:"Offline",
   kickBtn:"Kick", leaveRoomBtn:"Leave room", roomFull:"This room already started - joining as a spectator.",
+  roomInfoTitle:"Room info", roomInfoNote:"Share this code so others can join - new players join as spectators until the next round starts. If your connection drops, reopening the game reconnects you with your score intact.",
+  leaveRoomConfirm:"Leave the room? You'll lose your place in this round.",
+  questionLanguageTitle:"Question language",
   answeredOf:(n,total)=>`${n} of ${total} answered`,
   spectatingNote:"You're watching this one - no input needed.",
   judgePanelTitle:"Judge the disputed answers", disputedAnswers:"Disputed",
@@ -1095,6 +1128,9 @@ fr: { dir:"ltr", langName:"Français",
   youAreHost:"Vous êtes l'hôte", youAreJudge:"Arbitrage", youAreSpectator:"Spectateur",
   roleHost:"Hôte", roleSpectator:"Spectateur", roleOffline:"Hors ligne",
   kickBtn:"Exclure", leaveRoomBtn:"Quitter la salle", roomFull:"Cette salle a déjà commencé - vous rejoignez en spectateur.",
+  roomInfoTitle:"Infos de la salle", roomInfoNote:"Partagez ce code pour que d'autres rejoignent - les nouveaux joueurs entrent en spectateurs jusqu'à la prochaine manche. Si votre connexion coupe, rouvrir le jeu vous reconnecte avec votre score intact.",
+  leaveRoomConfirm:"Quitter la salle ? Vous perdrez votre place dans cette manche.",
+  questionLanguageTitle:"Langue des questions",
   answeredOf:(n,total)=>`${n} sur ${total} ont répondu`,
   spectatingNote:"Vous observez cette question - aucune action nécessaire.",
   judgePanelTitle:"Tranchez les réponses contestées", disputedAnswers:"Contestées",
@@ -1188,6 +1224,9 @@ ar: { dir:"rtl", langName:"العربية",
   youAreHost:"أنت المضيف", youAreJudge:"تحكيم", youAreSpectator:"مُشاهدة",
   roleHost:"مضيف", roleSpectator:"مُشاهد", roleOffline:"غير متصل",
   kickBtn:"طرد", leaveRoomBtn:"مغادرة الغرفة", roomFull:"بدأت هذه الغرفة بالفعل - ستنضم كمُشاهد.",
+  roomInfoTitle:"معلومات الغرفة", roomInfoNote:"شارك هذا الرمز ليتمكن الآخرون من الانضمام - ينضم اللاعبون الجدد كمُشاهدين حتى تبدأ الجولة التالية. إذا انقطع اتصالك، فإن إعادة فتح اللعبة تُعيد ربطك مع نتيجتك كما هي.",
+  leaveRoomConfirm:"مغادرة الغرفة؟ ستفقد مكانك في هذه الجولة.",
+  questionLanguageTitle:"لغة الأسئلة",
   answeredOf:(n,total)=>`أجاب ${n} من ${total}`,
   spectatingNote:"أنت تُشاهد هذا السؤال - لا حاجة لأي إجراء.",
   judgePanelTitle:"افصل في الإجابات المتنازع عليها", disputedAnswers:"متنازع عليها",
@@ -3432,6 +3471,58 @@ function rmLeaveRoom(){
   show("screen-menu");
 }
 
+// Leaving mid-game is one click away from losing your place in the round, unlike lobbyLeave
+// (pre-game, nothing to lose) - so it goes through the same confirm-modal pattern as everything
+// else destructive on this screen, rather than firing on the first tap.
+function rmConfirmLeave(){
+  openModal(`
+    <h2>${esc(t("leaveRoomBtn"))}</h2>
+    <p style="margin-bottom:18px">${esc(t("leaveRoomConfirm"))}</p>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" id="modalLeaveCancel">${esc(t("cancel"))}</button>
+      <button class="btn btn-primary" id="modalLeaveConfirm">${esc(t("leaveRoomBtn"))}</button>
+    </div>
+  `);
+  on($("modalLeaveCancel"), "click", closeModal);
+  on($("modalLeaveConfirm"), "click", () => { closeModal(); rmLeaveRoom(); });
+}
+
+// The settings/info panel available from every mid-game room screen: the code, so a friend - or
+// this same player reconnecting on another device - can join, plus who is currently in the room.
+// Joining/reconnecting itself needs no new plumbing here: a fresh player who submits
+// this code lands in handleSocket exactly like one who joined from the lobby (spectator until the
+// next round, §20), and this device's own reconnect-with-score-intact already happens automatically
+// (rmConnect's close handler + the saved RM_CODE_KEY on boot) - this panel just surfaces the code.
+function rmOpenRoomInfo(){
+  const s = RM.state; if (!s) return;
+  const code = s.code || RM.code || "";
+  const rows = Object.values(s.players).map(p => `
+    <div class="prow ${p.connected?"":"offline"} ${p.id===RM.me.id?"me":""}">
+      ${s.teams[p.teamId] ? `<span class="teamdot" style="background:${s.teams[p.teamId].color}"></span>` : ""}
+      <span class="pname">${esc(p.nickname)}</span>
+      ${p.id===s.hostId ? `<span class="badge host">${esc(t("roleHost"))}</span>` : ""}
+      ${p.role==="spectator" ? `<span class="badge">${esc(t("roleSpectator"))}</span>` : ""}
+      ${!p.connected ? `<span class="badge">${esc(t("roleOffline"))}</span>` : ""}
+    </div>`).join("");
+  openModal(`
+    <h2>${esc(t("roomInfoTitle"))}</h2>
+    <div style="text-align:center;margin-bottom:8px">
+      <div class="roomcode" id="modalRoomCode">${esc(code)}</div>
+      <p class="roomcode-hint">${esc(t("tapToCopy"))}</p>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px">${esc(t("roomInfoNote"))}</p>
+    <div class="section-title" style="margin-bottom:8px">${esc(t("playersTitle"))}</div>
+    <div class="plist" style="margin-bottom:16px">${rows}</div>
+    <div style="text-align:end"><button class="btn btn-primary" id="modalRoomInfoClose">${esc(t("close"))}</button></div>
+  `);
+  on($("modalRoomInfoClose"), "click", closeModal);
+  on($("modalRoomCode"), "click", () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(code).then(()=>toast(t("tapToCopy")+" ✓")).catch(()=>{});
+  });
+}
+document.querySelectorAll(".rm-settings-btn").forEach(b => on(b, "click", rmOpenRoomInfo));
+document.querySelectorAll(".rm-leave-btn").forEach(b => on(b, "click", rmConfirmLeave));
+
 function rmOnMessage(data){
   switch (data.type){
     case "pong": {
@@ -3448,7 +3539,11 @@ function rmOnMessage(data){
     case "mixShift": return toast(data.direction==="up" ? t("mixShiftUp") : t("mixShiftDown"));
     case "final": return rmOnFinal(data);
     case "notice": return (data.notices||[]).forEach(n => toast(noticeText(n)));
-    case "error": return rmEntryMsg(data.message || data.code || "Error");
+    // toast(), not rmEntryMsg(): this message arrives any time a server-side action fails
+    // (e.g. "start" hitting sources-unreachable/too-few-questions), and the host is almost never
+    // on screen-room-home (rmEntryMsg's element) when that happens - they're in the lobby, mid-
+    // round, wherever. A toast is visible from every screen, so the failure is never silent.
+    case "error": return toast(data.message || data.code || "Error");
   }
 }
 /* ---------------- lobby ---------------- */
@@ -3531,9 +3626,10 @@ function rmRenderLobbySettings(settings, mix){
   const active = new Set(settings.categories.includes("mix") ? CATEGORY_KEYS : settings.categories);
   $("lobbyCatGrid").querySelectorAll("[data-c]").forEach(b => b.classList.toggle("on", active.has(b.dataset.c)));
 
-  const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegRegion","region"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"]];
+  const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegRegion","region"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"],["lobbySegQLang","questionLang"]];
   for (const [id,field] of segs){
-    $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", String(b.dataset.v)===String(settings[field])));
+    const val = field==="questionLang" ? (settings[field] || "en") : settings[field];
+    $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", String(b.dataset.v)===String(val)));
   }
   $("lobbyToggleStreaks").checked = settings.streaks;
   $("lobbyToggleJudgeOnly").checked = !!RM.state.judgeOnlyHost;
@@ -3551,6 +3647,7 @@ rmWireLobbySeg("lobbySegIntensity","intensity");
 rmWireLobbySeg("lobbySegRegion","region");
 rmWireLobbySeg("lobbySegTeams","teams",Number);
 rmWireLobbySeg("lobbySegPace","revealPace");
+rmWireLobbySeg("lobbySegQLang","questionLang");
 on($("lobbyToggleStreaks"), "change", () => rmSend({type:"configure", streaks:$("lobbyToggleStreaks").checked}));
 on($("lobbyToggleJudgeOnly"), "change", () => rmSend({type:"configure", judgeOnlyHost:$("lobbyToggleJudgeOnly").checked}));
 on($("lobbyStartBtn"), "click", () => rmSend({type:"start"}));
@@ -3730,6 +3827,7 @@ function rmOnReveal(data){
 
   const isHost = rmIsHost();
   $("rrNextBtn").classList.toggle("hide", !isHost);
+  $("rrNextBtn").disabled = false; // fresh reveal - re-enable in case the previous one was clicked
   $("rrWaitingNote").classList.toggle("hide", isHost);
 }
 
@@ -3782,7 +3880,10 @@ function rmRankSound(direction){
   if (direction==="up") { rmBeep(660, 90); setTimeout(()=>rmBeep(990, 140), 90); }
   else { rmBeep(440, 90); setTimeout(()=>rmBeep(260, 160), 90); }
 }
-on($("rrNextBtn"), "click", () => rmSend({type:"next"}));
+// Disabled immediately on click, not just re-enabled on the next reveal: a double-click otherwise
+// fires two "next" sends before either round-trips, and while the server now no-ops the second one
+// (room.js's serveNextQuestion in-flight guard), this stops the extra message going out at all.
+on($("rrNextBtn"), "click", () => { $("rrNextBtn").disabled = true; rmSend({type:"next"}); });
 
 /* ---------------- podium ---------------- */
 function rmOnFinal(data){
@@ -3853,7 +3954,8 @@ document.addEventListener("keydown", (e) => {
     }
   }
   if ($("screen-room-reveal").classList.contains("active") && rmIsHost() && (e.key==="Enter"||e.key===" ")){
-    e.preventDefault(); rmSend({type:"next"});
+    e.preventDefault();
+    if (!$("rrNextBtn").disabled) $("rrNextBtn").click(); // routes through the same disabled-on-click guard as a mouse click, so a held/repeating key can't flood "next" sends
   }
 });
 
