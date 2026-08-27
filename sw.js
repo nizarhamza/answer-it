@@ -5,10 +5,12 @@
 //
 // Bump CACHE's version suffix whenever core assets change meaningfully, so returning players
 // pick up the new shell instead of a stale one lingering behind stale-while-revalidate.
-const CACHE = "answer-it-v1";
+const CACHE = "answer-it-v2";
 const CORE_ASSETS = [
+  // "./" only - never "./index.html". Cloudflare Pages 308-redirects "/index.html" -> "/", and
+  // a redirected Response can't be cache.put()'d (it rejects addAll wholesale) nor handed to
+  // respondWith() for a navigation. That mismatch is what made the installed PWA fail to launch.
   "./",
-  "./index.html",
   "./manifest.webmanifest",
   "./bank/curated-core.js",
   "./icons/icon-192.png",
@@ -34,13 +36,26 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   if (new URL(req.url).origin !== self.location.origin) return; // leave APIs/fonts alone entirely
 
-  // Stale-while-revalidate: serve the cached shell instantly, refresh it in the background so
-  // the next launch (online or off) has whatever shipped most recently.
+  // Navigations (including the installed PWA's launch): resolve to the cached "./" shell, then
+  // fall back to fetching "./" directly. Never reuse `req` here - its URL may be "/index.html",
+  // which Pages 308-redirects, and a redirected response is illegal to return for a navigation.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      caches.match("./").then((shell) => shell || fetch("./").catch(() => shell || Response.error()))
+    );
+    return;
+  }
+
+  // Everything else: stale-while-revalidate. Serve the cached copy instantly, refresh in the
+  // background. Skip caching redirected or non-OK responses so a bad entry can't poison addAll.
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req)
         .then((res) => {
-          if (res && res.ok) caches.open(CACHE).then((c) => c.put(req, res.clone()));
+          if (res && res.ok && !res.redirected) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
         })
         .catch(() => cached);
