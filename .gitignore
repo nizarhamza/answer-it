@@ -14,3 +14,8 @@ npm-debug.log*
 
 # Wrangler local cache/dev state
 .wrangler/
+
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

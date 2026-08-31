@@ -22,15 +22,17 @@ export const CATEGORIES = [
 ];
 export const CATEGORY_KEYS = CATEGORIES.map((c) => c.key);
 
-// The Trivia API v2 category keys per Answer It category. `games` has no category of its own
-// on Trivia API - it only exists as tags (queried separately, see TRIVIA_API_TAGS below).
-// `islamic` has no category or tag on either source - curated-only, same empty-mapping
-// treatment `games` gets for its own API-less slice (buildPool's `||[]` + length guards
-// already degrade gracefully for a category with nothing to fetch).
+// The Trivia API v2 category keys per Answer It category. v2's own list (GET /v2/categories) is
+// exactly 10 slugs; each of our 11 maps onto one - or two, for `culture`. `games` has no
+// category of its own on Trivia API - it only exists as tags (queried separately, see
+// TRIVIA_API_TAGS below). `islamic` has no category or tag on either source - curated-only,
+// same empty-mapping treatment `games` gets for its own API-less slice (buildPool's `||[]` +
+// length guards already degrade gracefully for a category with nothing to fetch). There is no
+// `politics` slug in v2 - passing one makes the API drop the category filter entirely.
 export const TRIVIA_API_CATEGORIES = {
   general: ["general_knowledge"],
   science: ["science"],
-  history: ["history", "politics"],
+  history: ["history"],
   geography: ["geography"],
   music: ["music"],
   screen: ["film_and_tv"],
@@ -42,16 +44,22 @@ export const TRIVIA_API_CATEGORIES = {
 };
 export const TRIVIA_API_TAGS = { games: ["video_games", "board_games"] };
 
-// nizarhamza/questions-api (the "native" v1 surface, GET /v1/questions). Its bank currently
-// only carries content for these four - science / history / geography / film - so the other
-// Answer It categories map to nothing and are skipped, exactly like `games`/`islamic` are on
-// The Trivia API. Value is the API's own category slug.
-export const QUESTION_API_CATEGORIES = {
-  science: "science",
-  history: "history",
-  geography: "geography",
-  screen: "film",
-};
+// nizarhamza/questions-api (the "native" v1 surface, GET /v1/questions) exposes its own ~24
+// categories, which don't line up with Answer It's curated 11. When a room's question source
+// is "native" the category grid switches to this list; the keys are prefixed `n:` so they
+// never collide with a curated key (`science` etc.) that still carries a translated label on
+// the client. `nativeSlug` strips the prefix back to the value the API's `category` param
+// wants. Mirrors NATIVE_CATEGORIES in index.html.
+export const NATIVE_CAT_PREFIX = "n:";
+export const NATIVE_CATEGORY_KEYS = [
+  "general", "science", "computers", "mathematics", "history", "geography", "music",
+  "film", "television", "videogames", "boardgames", "sports", "art", "theatre",
+  "literature", "mythology", "politics", "celebrities", "animals", "vehicles",
+  "comics", "anime", "cartoons",
+].map((s) => NATIVE_CAT_PREFIX + s);
+export function nativeSlug(key) {
+  return key.startsWith(NATIVE_CAT_PREFIX) ? key.slice(NATIVE_CAT_PREFIX.length) : key;
+}
 
 // OpenTDB numeric category ids (opentdb.com/api_category.php) - one call per id, §6.1.
 // No `islamic` entry - OpenTDB has no matching category either.
