@@ -536,6 +536,10 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
           <button data-v="native" data-i18n="questionSourceNative"></button>
         </div>
         <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="questionSourceNote"></p>
+        <div class="togglerow" id="curatedBankRow" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+          <div><div class="lbl" data-i18n="curatedBankLabel"></div><div class="sub" data-i18n="curatedBankSub"></div></div>
+          <label class="switch"><input type="checkbox" id="toggleCurated" checked><span class="track"><span class="knob"></span></span></label>
+        </div>
       </div>
 
       <div class="card">
@@ -783,6 +787,10 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
             <button data-v="native" data-i18n="questionSourceNative"></button>
           </div>
           <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="questionSourceNote"></p>
+          <div class="togglerow" id="lobbyCuratedBankRow" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+            <div><div class="lbl" data-i18n="curatedBankLabel"></div></div>
+            <label class="switch"><input type="checkbox" id="lobbyToggleCurated" checked><span class="track"><span class="knob"></span></span></label>
+          </div>
         </div>
         <div class="card">
           <div class="section-title" data-i18n="questionLanguageTitle"></div>
@@ -1114,6 +1122,7 @@ en: { dir:"ltr", langName:"English",
   regionNote:"Picks only that region's curated questions - a themed round, not a wider mix. A narrow region with a narrow category can come up short; widen either if a round won't build.",
   questionSourceTitle:"Question source", questionSourceTrivia:"Trivia API", questionSourceNative:"My question API",
   questionSourceNote:"Trivia API blends the curated bank with The Trivia API. My question API replaces everything - no curated bank, no filtering - and today only covers Science, History, Geography and Film, in English only. Region has no effect on it.",
+  curatedBankLabel:"Curated bank", curatedBankSub:"Blend in the hand-written question bank. Off = The Trivia API only, and region stops applying.",
   levelEasy:"Easy", levelMedium:"Medium", levelHard:"Hard", levelHell:"Hell",
   streaksLabel:"Streaks", streaksSub:"Consecutive correct answers build a score multiplier",
   hellInsuranceLabel:"Hell Insurance", hellInsuranceSub:"A streak of 3+ survives a missed Hell question at 1, not 0",
@@ -1217,6 +1226,7 @@ fr: { dir:"ltr", langName:"Français",
   regionNote:"Ne sert que les questions du bassin sélectionné pour cette région - une partie thématique, pas un mélange élargi. Une région restreinte combinée à une catégorie restreinte peut manquer de questions ; élargissez l'une ou l'autre si la partie ne se lance pas.",
   questionSourceTitle:"Source des questions", questionSourceTrivia:"Trivia API", questionSourceNative:"Mon API de questions",
   questionSourceNote:"Trivia API combine la sélection maison et The Trivia API. Mon API de questions remplace tout - pas de sélection maison, pas de filtrage - et ne couvre aujourd'hui que Sciences, Histoire, Géographie et Cinéma, en anglais uniquement. La région n'a aucun effet dessus.",
+  curatedBankLabel:"Sélection maison", curatedBankSub:"Mélange la sélection maison de questions. Désactivé = uniquement The Trivia API, et la région ne s'applique plus.",
   levelEasy:"Facile", levelMedium:"Moyen", levelHard:"Difficile", levelHell:"Enfer",
   streaksLabel:"Séries", streaksSub:"Des bonnes réponses consécutives augmentent un multiplicateur de score",
   hellInsuranceLabel:"Assurance Enfer", hellInsuranceSub:"Une série de 3+ survit à une question Enfer manquée en tombant à 1 au lieu de 0",
@@ -1320,6 +1330,7 @@ ar: { dir:"rtl", langName:"العربية",
   regionNote:"يقتصر على أسئلة تلك المنطقة فقط من البنك المُنتقى - جولة ذات طابع خاص، لا مزيج أوسع. قد لا تكفي الأسئلة مع منطقة وفئة ضيقتين معًا؛ وسّع إحداهما إذا تعذّر بناء الجولة.",
   questionSourceTitle:"مصدر الأسئلة", questionSourceTrivia:"Trivia API", questionSourceNative:"واجهة أسئلتي",
   questionSourceNote:"يمزج خيار Trivia API البنك المُنتقى مع The Trivia API. أما واجهة أسئلتي فتستبدل كل شيء - بلا بنك منتقى وبلا تصفية - وتغطي حاليًا العلوم والتاريخ والجغرافيا والأفلام فقط، بالإنجليزية فقط. ولا تأثير للمنطقة عليها.",
+  curatedBankLabel:"البنك المُنتقى", curatedBankSub:"يمزج بنك الأسئلة المكتوب يدويًا. عند الإيقاف: The Trivia API فقط، ولا تُطبَّق المنطقة.",
   levelEasy:"سهل", levelMedium:"متوسط", levelHard:"صعب", levelHell:"جحيم",
   streaksLabel:"التتابع", streaksSub:"الإجابات الصحيحة المتتالية تزيد مضاعف النقاط",
   hellInsuranceLabel:"تأمين الجحيم", hellInsuranceSub:"عند تتابع 3 إجابات أو أكثر، الفشل في سؤال جحيم يُبقي التتابع عند 1 بدلاً من الصفر",
@@ -2303,9 +2314,13 @@ function minPerBucket(n, categoryCount){
 // `qSource === "native"` swaps the whole question source for nizarhamza/questions-api: no
 // curated bank, no quality gate, no Trivia API / OpenTDB. The API is trusted to return
 // final-quality questions - a deliberate choice, not a fallback.
-async function buildPool(categories, n, onProgress, shouldCancel, region, qSource){
+async function buildPool(categories, n, onProgress, shouldCancel, region, qSource, useCurated){
   if (qSource === "native") return buildNativePool(categories, onProgress, shouldCancel);
-  const regionFilter = region && region!=="any" ? region : null;
+  // The curated bank can be switched off (Question source -> "Curated bank"), leaving The Trivia
+  // API + OpenTDB as the whole pool (still quality-gated). Region only ever filtered curated
+  // rows, so with the bank off it has nothing to act on - treat it as unset so the fetch runs.
+  const wantCurated = useCurated !== false;
+  const regionFilter = wantCurated && region && region!=="any" ? region : null;
   const minBucket = minPerBucket(n, categories.length);
   const pool = {};
   for (const c of categories) pool[c] = { easy:[], medium:[], hard:[] };
@@ -2313,7 +2328,7 @@ async function buildPool(categories, n, onProgress, shouldCancel, region, qSourc
   // Curated core first (§6.5.6). These are the questions the round actually wants; everything
   // fetched below only tops up what the bank cannot cover. It also means a round is playable
   // before a single network call returns, and stays playable when both APIs are down.
-  for (const c of categories){
+  if (wantCurated) for (const c of categories){
     for (const q of loadCurated(buildAccepted, { category:c, region:regionFilter })){
       if (!pool[c][q.level]) continue;
       if (seen.has(q.key)) continue;
@@ -3017,7 +3032,7 @@ function carryOverUnserved(pool){
 function loadSettings(){
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch {}
-  return Object.assign({ n:15, categories:[...CATEGORY_KEYS], style:"choice", intensity:"adaptive", streaks:true, hellInsurance:false, extended:false, region:"any", questionSource:"trivia" }, s||{});
+  return Object.assign({ n:15, categories:[...CATEGORY_KEYS], style:"choice", intensity:"adaptive", streaks:true, hellInsurance:false, extended:false, region:"any", questionSource:"trivia", curatedBank:true }, s||{});
 }
 function saveSettings(s){ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {} }
 function loadPB(){
@@ -3065,6 +3080,7 @@ wireSeg("segQSource", "questionSource");
 on($("toggleStreaks"), "change", e => { settings.streaks = e.target.checked; refreshSetup(); });
 on($("toggleInsurance"), "change", e => { settings.hellInsurance = e.target.checked; refreshSetup(); });
 on($("toggleExtended"), "change", e => { settings.extended = e.target.checked; refreshSetup(); });
+on($("toggleCurated"), "change", e => { settings.curatedBank = e.target.checked; refreshSetup(); });
 
 const LEVEL_COLOR_VAR = { easy:"--lvl-easy", medium:"--lvl-medium", hard:"--lvl-hard", hell:"--lvl-hell" };
 function lvlDot(level){
@@ -3076,6 +3092,10 @@ function refreshSetup(){
   $("segIntensity").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.intensity));
   $("segRegion").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.region));
   $("segQSource").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.questionSource));
+  const nativeSrc = settings.questionSource === "native";
+  $("toggleCurated").checked = nativeSrc ? false : settings.curatedBank !== false;
+  $("toggleCurated").disabled = nativeSrc; // "My question API" has no curated bank to blend
+  $("curatedBankRow").style.opacity = nativeSrc ? ".45" : "";
   $("toggleStreaks").checked = settings.streaks;
   $("toggleInsurance").checked = settings.hellInsurance;
   $("toggleInsurance").disabled = !settings.streaks;
@@ -3127,7 +3147,7 @@ on($("startRoundBtn"), "click", async () => {
   $("loadingSub").textContent = t("fetchingQuestions");
   $("loadingCancel").classList.remove("hide");
   try {
-    const pool = await buildPool(settings.categories, settings.n, p => $("loadingSub").textContent = progressText(p), () => loadingCancelFlag, settings.region, settings.questionSource);
+    const pool = await buildPool(settings.categories, settings.n, p => $("loadingSub").textContent = progressText(p), () => loadingCancelFlag, settings.region, settings.questionSource, settings.curatedBank);
     const total = LEVELS.filter(L=>L!=="hell").reduce((s,L)=>s+poolTotal(pool, settings.categories, L), 0);
     if (total < Math.min(6, settings.n)){
       $("errorMsg").textContent = t("errorTooLittle");
@@ -4198,6 +4218,10 @@ function rmRenderLobbySettings(settings, mix){
     $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", String(b.dataset.v)===String(val)));
   }
   $("lobbyToggleStreaks").checked = settings.streaks;
+  const lobbyNativeSrc = (settings.questionSource || "trivia") === "native";
+  $("lobbyToggleCurated").checked = lobbyNativeSrc ? false : settings.curatedBank !== false;
+  $("lobbyToggleCurated").disabled = lobbyNativeSrc;
+  $("lobbyCuratedBankRow").style.opacity = lobbyNativeSrc ? ".45" : "";
   $("lobbyToggleJudgeOnly").checked = !!RM.state.judgeOnlyHost;
   $("lobbyMixBar").innerHTML = LEVELS.map(L => `<div style="width:${(mix[L]||0)/settings.n*100}%;background:var(${LEVEL_COLOR_VAR[L]})"></div>`).join("");
 }
@@ -4216,6 +4240,7 @@ rmWireLobbySeg("lobbySegPace","revealPace");
 rmWireLobbySeg("lobbySegQLang","questionLang");
 rmWireLobbySeg("lobbySegQSource","questionSource");
 on($("lobbyToggleStreaks"), "change", () => rmSend({type:"configure", streaks:$("lobbyToggleStreaks").checked}));
+on($("lobbyToggleCurated"), "change", () => rmSend({type:"configure", curatedBank:$("lobbyToggleCurated").checked}));
 on($("lobbyToggleJudgeOnly"), "change", () => rmSend({type:"configure", judgeOnlyHost:$("lobbyToggleJudgeOnly").checked}));
 on($("lobbyStartBtn"), "click", () => rmSend({type:"start"}));
 on($("lobbyLeave"), "click", rmLeaveRoom);

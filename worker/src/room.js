@@ -36,7 +36,7 @@ function defaultSettings() {
   return {
     n: 15, categories: ["mix"], style: "mixed", intensity: "adaptive", region: "any",
     streaks: true, hellInsurance: false, extended: false, teams: 0, revealPace: "host",
-    questionLang: "en", questionSource: "trivia",
+    questionLang: "en", questionSource: "trivia", curatedBank: true,
   };
 }
 const QUESTION_LANGS = ["en", ...SUPPORTED_LANGS];
@@ -272,6 +272,7 @@ export class Room {
       revealPace: ["auto", "host"].includes(data.revealPace) ? data.revealPace : s.revealPace,
       questionLang: QUESTION_LANGS.includes(data.questionLang) ? data.questionLang : (s.questionLang || "en"),
       questionSource: QUESTION_SOURCES.includes(data.questionSource) ? data.questionSource : (s.questionSource || "trivia"),
+      curatedBank: data.curatedBank !== undefined ? !!data.curatedBank : (s.curatedBank !== false),
     };
     if (data.judgeOnlyHost !== undefined) room.judgeOnlyHost = !!data.judgeOnlyHost;
     this.syncTeams(room);
@@ -352,6 +353,7 @@ export class Room {
       pool = await buildPool(categories, room.settings.n, new Set(room.seenQuestionIds), room.settings.region, {
         source: room.settings.questionSource,
         endpoint: this.env.QUESTION_API_ENDPOINT || "",
+        curatedBank: room.settings.curatedBank !== false,
       });
     } catch {
       return this.sendTo(this.wsForPlayer(playerId)[0], { type: "error", code: "sources-unreachable", message: "Both trivia sources are unreachable right now. Try again in a moment." });

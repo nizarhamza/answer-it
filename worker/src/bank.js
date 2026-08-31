@@ -48,15 +48,18 @@ function minPerBucket(n, categoryCount) {
 // curated bank, no quality gate, no Trivia API / OpenTDB - the API is trusted to return
 // final-quality questions (host's explicit choice). `opts.endpoint` is that API's origin
 // (env.QUESTION_API_ENDPOINT); empty -> empty pool -> onStart's "too-few-questions" error.
+// `opts.curatedBank === false` keeps the trivia sources but drops the hand-written bank (and
+// with it the region filter, which only ever acted on curated rows).
 export async function buildPool(categories, n, excludeKeys = new Set(), region = "any", opts = {}) {
   if (opts.source === "native") return buildNativePool(categories, excludeKeys, opts.endpoint || "");
-  const regionFilter = region && region !== "any" ? region : null;
+  const wantCurated = opts.curatedBank !== false;
+  const regionFilter = wantCurated && region && region !== "any" ? region : null;
   const minBucket = minPerBucket(n, categories.length);
   const pool = {};
   for (const c of categories) pool[c] = { easy: [], medium: [], hard: [] };
   const seen = new Set(excludeKeys);
 
-  for (const c of categories) {
+  if (wantCurated) for (const c of categories) {
     for (const q of loadCurated(buildAccepted, { category: c, region: regionFilter })) {
       const key = dedupeKey(q);
       if (!pool[c][q.level] || seen.has(key)) continue;
