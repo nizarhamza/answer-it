@@ -9,6 +9,13 @@ compatibility_date = "2024-11-01"
 [ai]
 binding = "AI"
 
+# Origin of nizarhamza/questions-api, used only when a room's host picks "My question API" as
+# the question source (default is The Trivia API). No auth. Leave empty to disable that option
+# server-side - a room set to "native" with no endpoint just fails to build a round.
+#   e.g. "https://questions-api.<your-subdomain>.workers.dev"
+[vars]
+QUESTION_API_ENDPOINT = "https://questions-api.nizarh393.workers.dev"
+
 # Translation cache. Create the namespace once, then paste the id it prints:
 #   npx wrangler kv namespace create TRANSLATIONS
 # Free plan: 100,000 reads/day, 1,000 writes/day, 1 GB. Reads are nowhere near binding (a

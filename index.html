@@ -530,6 +530,19 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
       </div>
 
       <div class="card">
+        <div class="section-title" data-i18n="questionSourceTitle"></div>
+        <div class="seg" id="segQSource">
+          <button data-v="trivia" data-i18n="questionSourceTrivia"></button>
+          <button data-v="native" data-i18n="questionSourceNative"></button>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="questionSourceNote"></p>
+        <div class="togglerow" id="curatedBankRow" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+          <div><div class="lbl" data-i18n="curatedBankLabel"></div><div class="sub" data-i18n="curatedBankSub"></div></div>
+          <label class="switch"><input type="checkbox" id="toggleCurated" checked><span class="track"><span class="knob"></span></span></label>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="togglerow">
           <div><div class="lbl" data-i18n="streaksLabel"></div><div class="sub" data-i18n="streaksSub"></div></div>
           <label class="switch"><input type="checkbox" id="toggleStreaks" checked><span class="track"><span class="knob"></span></span></label>
@@ -766,6 +779,18 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
             <button data-v="na" data-i18n="regionNa"></button>
           </div>
           <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="regionNote"></p>
+        </div>
+        <div class="card">
+          <div class="section-title" data-i18n="questionSourceTitle"></div>
+          <div class="seg" id="lobbySegQSource">
+            <button data-v="trivia" data-i18n="questionSourceTrivia"></button>
+            <button data-v="native" data-i18n="questionSourceNative"></button>
+          </div>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:10px" data-i18n="questionSourceNote"></p>
+          <div class="togglerow" id="lobbyCuratedBankRow" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+            <div><div class="lbl" data-i18n="curatedBankLabel"></div></div>
+            <label class="switch"><input type="checkbox" id="lobbyToggleCurated" checked><span class="track"><span class="knob"></span></span></label>
+          </div>
         </div>
         <div class="card">
           <div class="section-title" data-i18n="questionLanguageTitle"></div>
@@ -1095,6 +1120,9 @@ en: { dir:"ltr", langName:"English",
   regionTitle:"Region", regionAny:"Any", regionAfrica:"Africa", regionAsia:"Asia",
   regionLatam:"Latin America", regionMena:"MENA", regionEurope:"Europe", regionNa:"North America",
   regionNote:"Picks only that region's curated questions - a themed round, not a wider mix. A narrow region with a narrow category can come up short; widen either if a round won't build.",
+  questionSourceTitle:"Question source", questionSourceTrivia:"Trivia API", questionSourceNative:"My question API",
+  questionSourceNote:"Trivia API blends the curated bank with The Trivia API. My question API replaces everything - no curated bank, no filtering - and today only covers Science, History, Geography and Film, in English only. Region has no effect on it.",
+  curatedBankLabel:"Curated bank", curatedBankSub:"Blend in the hand-written question bank. Off = The Trivia API only, and region stops applying.",
   levelEasy:"Easy", levelMedium:"Medium", levelHard:"Hard", levelHell:"Hell",
   streaksLabel:"Streaks", streaksSub:"Consecutive correct answers build a score multiplier",
   hellInsuranceLabel:"Hell Insurance", hellInsuranceSub:"A streak of 3+ survives a missed Hell question at 1, not 0",
@@ -1196,6 +1224,9 @@ fr: { dir:"ltr", langName:"Français",
   regionTitle:"Région", regionAny:"Toutes", regionAfrica:"Afrique", regionAsia:"Asie",
   regionLatam:"Amérique latine", regionMena:"MENA", regionEurope:"Europe", regionNa:"Amérique du Nord",
   regionNote:"Ne sert que les questions du bassin sélectionné pour cette région - une partie thématique, pas un mélange élargi. Une région restreinte combinée à une catégorie restreinte peut manquer de questions ; élargissez l'une ou l'autre si la partie ne se lance pas.",
+  questionSourceTitle:"Source des questions", questionSourceTrivia:"Trivia API", questionSourceNative:"Mon API de questions",
+  questionSourceNote:"Trivia API combine la sélection maison et The Trivia API. Mon API de questions remplace tout - pas de sélection maison, pas de filtrage - et ne couvre aujourd'hui que Sciences, Histoire, Géographie et Cinéma, en anglais uniquement. La région n'a aucun effet dessus.",
+  curatedBankLabel:"Sélection maison", curatedBankSub:"Mélange la sélection maison de questions. Désactivé = uniquement The Trivia API, et la région ne s'applique plus.",
   levelEasy:"Facile", levelMedium:"Moyen", levelHard:"Difficile", levelHell:"Enfer",
   streaksLabel:"Séries", streaksSub:"Des bonnes réponses consécutives augmentent un multiplicateur de score",
   hellInsuranceLabel:"Assurance Enfer", hellInsuranceSub:"Une série de 3+ survit à une question Enfer manquée en tombant à 1 au lieu de 0",
@@ -1297,6 +1328,9 @@ ar: { dir:"rtl", langName:"العربية",
   regionTitle:"المنطقة", regionAny:"أي منطقة", regionAfrica:"أفريقيا", regionAsia:"آسيا",
   regionLatam:"أمريكا اللاتينية", regionMena:"الشرق الأوسط وشمال أفريقيا", regionEurope:"أوروبا", regionNa:"أمريكا الشمالية",
   regionNote:"يقتصر على أسئلة تلك المنطقة فقط من البنك المُنتقى - جولة ذات طابع خاص، لا مزيج أوسع. قد لا تكفي الأسئلة مع منطقة وفئة ضيقتين معًا؛ وسّع إحداهما إذا تعذّر بناء الجولة.",
+  questionSourceTitle:"مصدر الأسئلة", questionSourceTrivia:"Trivia API", questionSourceNative:"واجهة أسئلتي",
+  questionSourceNote:"يمزج خيار Trivia API البنك المُنتقى مع The Trivia API. أما واجهة أسئلتي فتستبدل كل شيء - بلا بنك منتقى وبلا تصفية - وتغطي حاليًا العلوم والتاريخ والجغرافيا والأفلام فقط، بالإنجليزية فقط. ولا تأثير للمنطقة عليها.",
+  curatedBankLabel:"البنك المُنتقى", curatedBankSub:"يمزج بنك الأسئلة المكتوب يدويًا. عند الإيقاف: The Trivia API فقط، ولا تُطبَّق المنطقة.",
   levelEasy:"سهل", levelMedium:"متوسط", levelHard:"صعب", levelHell:"جحيم",
   streaksLabel:"التتابع", streaksSub:"الإجابات الصحيحة المتتالية تزيد مضاعف النقاط",
   hellInsuranceLabel:"تأمين الجحيم", hellInsuranceSub:"عند تتابع 3 إجابات أو أكثر، الفشل في سؤال جحيم يُبقي التتابع عند 1 بدلاً من الصفر",
@@ -1821,6 +1855,9 @@ const TRIVIA_API_CATEGORIES = {
   islamic:[], // no dedicated API category - curated-only, same treatment as "games" gets for its API-less slice
 };
 const TRIVIA_API_TAGS = { games:["video_games","board_games"] };
+// nizarhamza/questions-api - its bank only has content for these four today, so every other
+// Answer It category maps to nothing and is skipped (same as games/islamic on Trivia API).
+const QUESTION_API_CATEGORIES = { science:"science", history:"history", geography:"geography", screen:"film" };
 const TRIVIA_TO_ANSWERIT = {};
 for (const [ourKey, apiKeys] of Object.entries(TRIVIA_API_CATEGORIES)) for (const ak of apiKeys) TRIVIA_TO_ANSWERIT[ak] = ourKey;
 const OPENTDB_CATEGORIES = {
@@ -1846,6 +1883,21 @@ function normalizeQuestion(raw, source, categoryKey){
     return { id: raw.id, key: contentKey(text), source:"trivia-api", text, category:categoryKey, level:raw.difficulty, type:"choice",
       options, answerIndex: options.indexOf(correct), accepted: buildAccepted(correct), modifiers:[], timeLimit:null,
       media:null, isNiche: !!raw.isNiche, correctAnswer: correct };
+  }
+  if (source==="question-api"){
+    // GET /v1/questions objects: 4-option MC, answer_index 0-3 into options, difficulty 1:1.
+    const text = String(raw.question||"").trim();
+    const options = Array.isArray(raw.options) ? raw.options.map(s=>String(s).trim()) : [];
+    const ai = Number(raw.answer_index);
+    if (!text || text.length>MAX_QUESTION_LEN) return null;
+    if (options.length!==4 || !Number.isInteger(ai) || ai<0 || ai>3) return null;
+    // No MIN_ANSWER_LEN floor (unlike trivia-api/opentdb): "H" or "6" is a valid answer here,
+    // and this is a choice question scored by index.
+    const correct = String(raw.answer ?? options[ai]).trim();
+    if (!correct || options[ai]!==correct) return null;
+    return { id:`qapi:${raw.id||text.slice(0,40)}`, key: contentKey(text), source:"question-api", text, category:categoryKey,
+      level:raw.difficulty, type:"choice", options, answerIndex: ai, accepted: buildAccepted(correct),
+      modifiers:[], timeLimit:null, media:null, isNiche:false, correctAnswer: correct };
   }
   if (source==="opentdb"){
     const dec = s => { try { return decodeURIComponent(s); } catch { return s; } };
@@ -1873,6 +1925,25 @@ async function fetchTriviaApi({categories=[], tags=[], limit=50, difficulties=["
   if (tags.length) p.set("tags", tags.join(","));
   const data = await fetchJson(`https://the-trivia-api.com/v2/questions?${p}`);
   return Array.isArray(data) ? data : [];
+}
+/* nizarhamza/questions-api. Paste the deployed Worker's origin here to use it as a question
+   source (Settings -> Question source -> "My question API"). Empty = the option still shows but
+   yields no questions. Runtime override, e.g. to point a live build at a local dev worker:
+     localStorage.setItem("answerit_question_api_endpoint", "http://localhost:8787")   */
+const QUESTION_API_ENDPOINT = "https://questions-api.nizarh393.workers.dev";
+const QUESTION_API_ENDPOINT_KEY = "answerit_question_api_endpoint";
+function questionApiEndpoint(){
+  try { return (localStorage.getItem(QUESTION_API_ENDPOINT_KEY) || QUESTION_API_ENDPOINT).replace(/\/$/, ""); }
+  catch { return QUESTION_API_ENDPOINT; }
+}
+async function fetchQuestionApi({category, difficulty, amount=100}={}){
+  const endpoint = questionApiEndpoint();
+  if (!endpoint) return [];
+  const p = new URLSearchParams({ amount:String(Math.min(100,amount)) });
+  if (category) p.set("category", category);
+  if (difficulty) p.set("difficulty", difficulty);
+  const data = await fetchJson(`${endpoint}/v1/questions?${p}`);
+  return data && Array.isArray(data.questions) ? data.questions : [];
 }
 /* OpenTDB session token. OpenTDB will happily hand back the same popular questions over and
    over; a session token is its own answer to that - it never returns a question twice for the
@@ -2240,8 +2311,16 @@ function minPerBucket(n, categoryCount){
   return Math.max(3, Math.ceil(worstCaseLevelShare / categoryCount) + 2);
 }
 
-async function buildPool(categories, n, onProgress, shouldCancel, region){
-  const regionFilter = region && region!=="any" ? region : null;
+// `qSource === "native"` swaps the whole question source for nizarhamza/questions-api: no
+// curated bank, no quality gate, no Trivia API / OpenTDB. The API is trusted to return
+// final-quality questions - a deliberate choice, not a fallback.
+async function buildPool(categories, n, onProgress, shouldCancel, region, qSource, useCurated){
+  if (qSource === "native") return buildNativePool(categories, onProgress, shouldCancel);
+  // The curated bank can be switched off (Question source -> "Curated bank"), leaving The Trivia
+  // API + OpenTDB as the whole pool (still quality-gated). Region only ever filtered curated
+  // rows, so with the bank off it has nothing to act on - treat it as unset so the fetch runs.
+  const wantCurated = useCurated !== false;
+  const regionFilter = wantCurated && region && region!=="any" ? region : null;
   const minBucket = minPerBucket(n, categories.length);
   const pool = {};
   for (const c of categories) pool[c] = { easy:[], medium:[], hard:[] };
@@ -2249,7 +2328,7 @@ async function buildPool(categories, n, onProgress, shouldCancel, region){
   // Curated core first (§6.5.6). These are the questions the round actually wants; everything
   // fetched below only tops up what the bank cannot cover. It also means a round is playable
   // before a single network call returns, and stays playable when both APIs are down.
-  for (const c of categories){
+  if (wantCurated) for (const c of categories){
     for (const q of loadCurated(buildAccepted, { category:c, region:regionFilter })){
       if (!pool[c][q.level]) continue;
       if (seen.has(q.key)) continue;
@@ -2339,6 +2418,47 @@ async function buildPool(categories, n, onProgress, shouldCancel, region){
     });
     // Stamped so the samplers can see where the fresh half of a bucket ends without re-reading
     // localStorage on every draw.
+    for (const q of pool[c][L]) q._seenAt = seenAt.get(q.key) || 0;
+  }
+  return pool;
+}
+
+// Curated-free, gate-free twin of buildPool for qSource === "native". One fetch per
+// (category, difficulty); a category the API has no content for is skipped, and one that
+// comes back empty simply stays empty - makeRoundSession's nearest-level fallback and the
+// "too little" guard on the start button already handle a thin or empty pool.
+async function buildNativePool(categories, onProgress, shouldCancel){
+  const pool = {};
+  for (const c of categories) pool[c] = { easy:[], medium:[], hard:[] };
+  const seen = new Set();
+  onProgress?.({ key:"fetchingQuestions" });
+  const calls = [];
+  for (const c of categories){
+    const apiCat = QUESTION_API_CATEGORIES[c];
+    if (!apiCat) continue;
+    for (const d of ["easy","medium","hard"]){
+      calls.push(fetchQuestionApi({ category:apiCat, difficulty:d, amount:100 }).then(list => {
+        for (const raw of list){
+          const q = normalizeQuestion(raw, "question-api", c);
+          if (!q || !["easy","medium","hard"].includes(q.level)) continue;
+          if (seen.has(q.key)) continue;
+          seen.add(q.key);
+          pool[c][q.level].push({ ...q, _score: CURATED_SCORE, _seenAt: 0 });
+        }
+      }));
+    }
+  }
+  await Promise.all(calls);
+  if (shouldCancel?.()) throw new RoundCancelled();
+  // Freshness stays a sort key, same as the main path - a repeat is only reached once the
+  // bucket's unseen questions are spent, then longest-ago-seen first.
+  const seenAt = loadSeen();
+  for (const c of categories) for (const L of ["easy","medium","hard"]){
+    pool[c][L].sort((a,b) => {
+      const sa = seenAt.get(a.key)||0, sb = seenAt.get(b.key)||0;
+      if (!sa !== !sb) return sa ? 1 : -1;
+      return sa - sb;
+    });
     for (const q of pool[c][L]) q._seenAt = seenAt.get(q.key) || 0;
   }
   return pool;
@@ -2901,7 +3021,7 @@ function carryOverUnserved(pool){
   for (const c of Object.keys(pool)){
     for (const L of ["easy","medium","hard"]){
       for (const q of pool[c][L] || []){
-        if (q.source === "custom") continue;
+        if (q.source === "custom" || q.source === "question-api") continue; // carryover is Trivia/OpenTDB only - a native round doesn't load it
         const { _seenAt, ...rest } = q; // freshness is recomputed against the seen store next time
         out.push(rest);
       }
@@ -2912,7 +3032,7 @@ function carryOverUnserved(pool){
 function loadSettings(){
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch {}
-  return Object.assign({ n:15, categories:[...CATEGORY_KEYS], style:"choice", intensity:"adaptive", streaks:true, hellInsurance:false, extended:false, region:"any" }, s||{});
+  return Object.assign({ n:15, categories:[...CATEGORY_KEYS], style:"choice", intensity:"adaptive", streaks:true, hellInsurance:false, extended:false, region:"any", questionSource:"trivia", curatedBank:true }, s||{});
 }
 function saveSettings(s){ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {} }
 function loadPB(){
@@ -2955,10 +3075,12 @@ wireSeg("segN", "n");
 wireSeg("segStyle", "style");
 wireSeg("segIntensity", "intensity");
 wireSeg("segRegion", "region");
+wireSeg("segQSource", "questionSource");
 
 on($("toggleStreaks"), "change", e => { settings.streaks = e.target.checked; refreshSetup(); });
 on($("toggleInsurance"), "change", e => { settings.hellInsurance = e.target.checked; refreshSetup(); });
 on($("toggleExtended"), "change", e => { settings.extended = e.target.checked; refreshSetup(); });
+on($("toggleCurated"), "change", e => { settings.curatedBank = e.target.checked; refreshSetup(); });
 
 const LEVEL_COLOR_VAR = { easy:"--lvl-easy", medium:"--lvl-medium", hard:"--lvl-hard", hell:"--lvl-hell" };
 function lvlDot(level){
@@ -2969,6 +3091,11 @@ function refreshSetup(){
   $("segStyle").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.style));
   $("segIntensity").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.intensity));
   $("segRegion").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.region));
+  $("segQSource").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.questionSource));
+  const nativeSrc = settings.questionSource === "native";
+  $("toggleCurated").checked = nativeSrc ? false : settings.curatedBank !== false;
+  $("toggleCurated").disabled = nativeSrc; // "My question API" has no curated bank to blend
+  $("curatedBankRow").style.opacity = nativeSrc ? ".45" : "";
   $("toggleStreaks").checked = settings.streaks;
   $("toggleInsurance").checked = settings.hellInsurance;
   $("toggleInsurance").disabled = !settings.streaks;
@@ -3020,7 +3147,7 @@ on($("startRoundBtn"), "click", async () => {
   $("loadingSub").textContent = t("fetchingQuestions");
   $("loadingCancel").classList.remove("hide");
   try {
-    const pool = await buildPool(settings.categories, settings.n, p => $("loadingSub").textContent = progressText(p), () => loadingCancelFlag, settings.region);
+    const pool = await buildPool(settings.categories, settings.n, p => $("loadingSub").textContent = progressText(p), () => loadingCancelFlag, settings.region, settings.questionSource, settings.curatedBank);
     const total = LEVELS.filter(L=>L!=="hell").reduce((s,L)=>s+poolTotal(pool, settings.categories, L), 0);
     if (total < Math.min(6, settings.n)){
       $("errorMsg").textContent = t("errorTooLittle");
@@ -4085,12 +4212,16 @@ function rmRenderLobbySettings(settings, mix){
   const active = new Set(settings.categories.includes("mix") ? CATEGORY_KEYS : settings.categories);
   $("lobbyCatGrid").querySelectorAll("[data-c]").forEach(b => b.classList.toggle("on", active.has(b.dataset.c)));
 
-  const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegRegion","region"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"],["lobbySegQLang","questionLang"]];
+  const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegRegion","region"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"],["lobbySegQLang","questionLang"],["lobbySegQSource","questionSource"]];
   for (const [id,field] of segs){
-    const val = field==="questionLang" ? (settings[field] || "en") : settings[field];
+    const val = field==="questionLang" ? (settings[field] || "en") : field==="questionSource" ? (settings[field] || "trivia") : settings[field];
     $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", String(b.dataset.v)===String(val)));
   }
   $("lobbyToggleStreaks").checked = settings.streaks;
+  const lobbyNativeSrc = (settings.questionSource || "trivia") === "native";
+  $("lobbyToggleCurated").checked = lobbyNativeSrc ? false : settings.curatedBank !== false;
+  $("lobbyToggleCurated").disabled = lobbyNativeSrc;
+  $("lobbyCuratedBankRow").style.opacity = lobbyNativeSrc ? ".45" : "";
   $("lobbyToggleJudgeOnly").checked = !!RM.state.judgeOnlyHost;
   $("lobbyMixBar").innerHTML = LEVELS.map(L => `<div style="width:${(mix[L]||0)/settings.n*100}%;background:var(${LEVEL_COLOR_VAR[L]})"></div>`).join("");
 }
@@ -4107,7 +4238,9 @@ rmWireLobbySeg("lobbySegRegion","region");
 rmWireLobbySeg("lobbySegTeams","teams",Number);
 rmWireLobbySeg("lobbySegPace","revealPace");
 rmWireLobbySeg("lobbySegQLang","questionLang");
+rmWireLobbySeg("lobbySegQSource","questionSource");
 on($("lobbyToggleStreaks"), "change", () => rmSend({type:"configure", streaks:$("lobbyToggleStreaks").checked}));
+on($("lobbyToggleCurated"), "change", () => rmSend({type:"configure", curatedBank:$("lobbyToggleCurated").checked}));
 on($("lobbyToggleJudgeOnly"), "change", () => rmSend({type:"configure", judgeOnlyHost:$("lobbyToggleJudgeOnly").checked}));
 on($("lobbyStartBtn"), "click", () => rmSend({type:"start"}));
 on($("lobbyLeave"), "click", rmLeaveRoom);
