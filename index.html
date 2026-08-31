@@ -480,7 +480,7 @@ body.spectating .optgrid, body.spectating .openrow{display:none !important}
       <div class="card">
         <div class="section-title" data-i18n="categoriesTitle"></div>
         <div class="catgrid" id="catGrid"></div>
-        <p style="font-size:12px;color:var(--muted);margin-top:10px" data-i18n="questionsLanguageNote"></p>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px" id="catNote" data-i18n="questionsLanguageNote"></p>
       </div>
 
       <div class="card">
@@ -1121,7 +1121,7 @@ en: { dir:"ltr", langName:"English",
   regionLatam:"Latin America", regionMena:"MENA", regionEurope:"Europe", regionNa:"North America",
   regionNote:"Picks only that region's curated questions - a themed round, not a wider mix. A narrow region with a narrow category can come up short; widen either if a round won't build.",
   questionSourceTitle:"Question source", questionSourceTrivia:"Trivia API", questionSourceNative:"My question API",
-  questionSourceNote:"Trivia API blends the curated bank with The Trivia API. My question API replaces everything - no curated bank, no filtering - and today only covers Science, History, Geography and Film, in English only. Region has no effect on it.",
+  questionSourceNote:"Trivia API blends the curated bank with The Trivia API. My question API replaces everything - no curated bank, no filtering - and brings its own category list, in English only. Region has no effect on it.",
   curatedBankLabel:"Curated bank", curatedBankSub:"Blend in the hand-written question bank. Off = The Trivia API only, and region stops applying.",
   levelEasy:"Easy", levelMedium:"Medium", levelHard:"Hard", levelHell:"Hell",
   streaksLabel:"Streaks", streaksSub:"Consecutive correct answers build a score multiplier",
@@ -1130,6 +1130,7 @@ en: { dir:"ltr", langName:"English",
   pickCategoryWarning:"Pick at least one category.",
   startRoundBtn:(n)=>`Start - ${n} + The Double`,
   questionsLanguageNote:"Curated questions are hand-translated. Questions pulled from the trivia APIs are machine-translated, so quality can vary there - especially for names.",
+  nativeCategoriesNote:"These are My question API's own categories. It serves English-only questions, and region does not apply.",
   buildingRound:"Building your round…", fetchingQuestions:"Fetching questions…",
   toppingUp:(i,total)=>`Topping up thin categories… (${i}/${total})`, cancel:"Cancel",
   couldntLoad:"Couldn't load questions",
@@ -1225,7 +1226,7 @@ fr: { dir:"ltr", langName:"Français",
   regionLatam:"Amérique latine", regionMena:"MENA", regionEurope:"Europe", regionNa:"Amérique du Nord",
   regionNote:"Ne sert que les questions du bassin sélectionné pour cette région - une partie thématique, pas un mélange élargi. Une région restreinte combinée à une catégorie restreinte peut manquer de questions ; élargissez l'une ou l'autre si la partie ne se lance pas.",
   questionSourceTitle:"Source des questions", questionSourceTrivia:"Trivia API", questionSourceNative:"Mon API de questions",
-  questionSourceNote:"Trivia API combine la sélection maison et The Trivia API. Mon API de questions remplace tout - pas de sélection maison, pas de filtrage - et ne couvre aujourd'hui que Sciences, Histoire, Géographie et Cinéma, en anglais uniquement. La région n'a aucun effet dessus.",
+  questionSourceNote:"Trivia API combine la sélection maison et The Trivia API. Mon API de questions remplace tout - pas de sélection maison, pas de filtrage - et apporte sa propre liste de catégories, en anglais uniquement. La région n'a aucun effet dessus.",
   curatedBankLabel:"Sélection maison", curatedBankSub:"Mélange la sélection maison de questions. Désactivé = uniquement The Trivia API, et la région ne s'applique plus.",
   levelEasy:"Facile", levelMedium:"Moyen", levelHard:"Difficile", levelHell:"Enfer",
   streaksLabel:"Séries", streaksSub:"Des bonnes réponses consécutives augmentent un multiplicateur de score",
@@ -1234,6 +1235,7 @@ fr: { dir:"ltr", langName:"Français",
   pickCategoryWarning:"Choisissez au moins une catégorie.",
   startRoundBtn:(n)=>`Commencer - ${n} + Le Double`,
   questionsLanguageNote:"Les questions de la sélection maison sont traduites à la main. Celles issues des API de quiz sont traduites automatiquement : la qualité peut donc varier, surtout pour les noms propres.",
+  nativeCategoriesNote:"Ce sont les catégories propres à Mon API de questions. Les questions sont en anglais uniquement, et la région ne s'applique pas.",
   buildingRound:"Préparation de la partie…", fetchingQuestions:"Récupération des questions…",
   toppingUp:(i,total)=>`Complément des catégories peu fournies… (${i}/${total})`, cancel:"Annuler",
   couldntLoad:"Impossible de charger les questions",
@@ -1329,7 +1331,7 @@ ar: { dir:"rtl", langName:"العربية",
   regionLatam:"أمريكا اللاتينية", regionMena:"الشرق الأوسط وشمال أفريقيا", regionEurope:"أوروبا", regionNa:"أمريكا الشمالية",
   regionNote:"يقتصر على أسئلة تلك المنطقة فقط من البنك المُنتقى - جولة ذات طابع خاص، لا مزيج أوسع. قد لا تكفي الأسئلة مع منطقة وفئة ضيقتين معًا؛ وسّع إحداهما إذا تعذّر بناء الجولة.",
   questionSourceTitle:"مصدر الأسئلة", questionSourceTrivia:"Trivia API", questionSourceNative:"واجهة أسئلتي",
-  questionSourceNote:"يمزج خيار Trivia API البنك المُنتقى مع The Trivia API. أما واجهة أسئلتي فتستبدل كل شيء - بلا بنك منتقى وبلا تصفية - وتغطي حاليًا العلوم والتاريخ والجغرافيا والأفلام فقط، بالإنجليزية فقط. ولا تأثير للمنطقة عليها.",
+  questionSourceNote:"يمزج خيار Trivia API البنك المُنتقى مع The Trivia API. أما واجهة أسئلتي فتستبدل كل شيء - بلا بنك منتقى وبلا تصفية - ولها قائمة فئاتها الخاصة، بالإنجليزية فقط. ولا تأثير للمنطقة عليها.",
   curatedBankLabel:"البنك المُنتقى", curatedBankSub:"يمزج بنك الأسئلة المكتوب يدويًا. عند الإيقاف: The Trivia API فقط، ولا تُطبَّق المنطقة.",
   levelEasy:"سهل", levelMedium:"متوسط", levelHard:"صعب", levelHell:"جحيم",
   streaksLabel:"التتابع", streaksSub:"الإجابات الصحيحة المتتالية تزيد مضاعف النقاط",
@@ -1338,6 +1340,7 @@ ar: { dir:"rtl", langName:"العربية",
   pickCategoryWarning:"اختر فئة واحدة على الأقل.",
   startRoundBtn:(n)=>`ابدأ - ${n} + السؤال المضاعف`,
   questionsLanguageNote:"الأسئلة المنتقاة مُترجمة يدويًا، أما الآتية من واجهات الأسئلة فتُترجم آليًا وقد تتفاوت جودتها - خصوصًا في الأسماء.",
+  nativeCategoriesNote:"هذه فئات واجهة أسئلتي نفسها. الأسئلة بالإنجليزية فقط، ولا تنطبق المنطقة.",
   buildingRound:"جارٍ تجهيز الجولة…", fetchingQuestions:"جارٍ جلب الأسئلة…",
   toppingUp:(i,total)=>`جارٍ استكمال الفئات الناقصة… (${i}/${total})`, cancel:"إلغاء",
   couldntLoad:"تعذّر تحميل الأسئلة",
@@ -1845,19 +1848,62 @@ const CATEGORY_KEYS = CATEGORIES.map(c=>c.key);
 // Label lookup keys follow "cat"/"level" + Capitalized(key) for every category and level -
 // verified to hold for all 11 categories and all 4 levels, so one small helper covers both
 // rather than a second translation table duplicating CATEGORIES/LEVELS.
-function catLabel(key){ return t("cat"+key[0].toUpperCase()+key.slice(1)); }
+function catLabel(key){
+  if (NATIVE_CAT_BY_KEY[key]) return NATIVE_CAT_BY_KEY[key].label; // English-only source, fixed label
+  return t("cat"+key[0].toUpperCase()+key.slice(1));
+}
+function catIcon(key){ return (NATIVE_CAT_BY_KEY[key] || CAT_BY_KEY[key])?.icon || "brain"; }
 function levelName(level){ return t("level"+level[0].toUpperCase()+level.slice(1)); }
 const CAT_BY_KEY = Object.fromEntries(CATEGORIES.map(c=>[c.key,c]));
+// The Trivia API v2's category list (GET /v2/categories) is exactly these 10 slugs - each of
+// our 11 maps onto one (or, for `culture`, two), except `games` (v2 has no video/board-games
+// category, only the tags below) and `islamic` (curated-only). No `politics` slug exists in
+// v2 - passing one makes the API drop the category filter entirely.
 const TRIVIA_API_CATEGORIES = {
-  general:["general_knowledge"], science:["science"], history:["history","politics"],
+  general:["general_knowledge"], science:["science"], history:["history"],
   geography:["geography"], music:["music"], screen:["film_and_tv"], games:[],
   sport:["sport_and_leisure"], arts:["arts_and_literature"], culture:["society_and_culture","food_and_drink"],
   islamic:[], // no dedicated API category - curated-only, same treatment as "games" gets for its API-less slice
 };
 const TRIVIA_API_TAGS = { games:["video_games","board_games"] };
-// nizarhamza/questions-api - its bank only has content for these four today, so every other
-// Answer It category maps to nothing and is skipped (same as games/islamic on Trivia API).
-const QUESTION_API_CATEGORIES = { science:"science", history:"history", geography:"geography", screen:"film" };
+// nizarhamza/questions-api exposes its own ~24 categories (GET /v1/categories), which don't
+// line up with Answer It's curated 11. When "My question API" is the question source the
+// category grid switches to *this* list instead - the keys, prefixed `n:` so they never
+// collide with a curated key like `science` that still needs a translated label, flow through
+// settings.categories / q.category / byCategory / personal bests exactly like curated keys do.
+// English-only source, so `label` is fixed rather than run through t(); `slug` is the value
+// the API's `category` param wants. Icons reuse the existing glyph set - the bank has more
+// categories than we have glyphs, so a few share one.
+const NATIVE_CAT_PREFIX = "n:";
+const NATIVE_CATEGORIES = [
+  { key:"n:general",     slug:"general",     icon:"brain",        label:"General Knowledge" },
+  { key:"n:science",     slug:"science",     icon:"flaskConical", label:"Science & Nature" },
+  { key:"n:computers",   slug:"computers",   icon:"settings",     label:"Computers" },
+  { key:"n:mathematics", slug:"mathematics", icon:"scale",        label:"Mathematics" },
+  { key:"n:history",     slug:"history",     icon:"landmark",     label:"History" },
+  { key:"n:geography",   slug:"geography",   icon:"globe",        label:"Geography" },
+  { key:"n:music",       slug:"music",       icon:"music",        label:"Music" },
+  { key:"n:film",        slug:"film",        icon:"clapperboard", label:"Film" },
+  { key:"n:television",  slug:"television",  icon:"clapperboard", label:"Television" },
+  { key:"n:videogames",  slug:"videogames",  icon:"gamepad",      label:"Video Games" },
+  { key:"n:boardgames",  slug:"boardgames",  icon:"gamepad",      label:"Board Games" },
+  { key:"n:sports",      slug:"sports",      icon:"trophy",       label:"Sports" },
+  { key:"n:art",         slug:"art",         icon:"drama",        label:"Art" },
+  { key:"n:theatre",     slug:"theatre",     icon:"drama",        label:"Theatre" },
+  { key:"n:literature",  slug:"literature",  icon:"bookOpen",     label:"Literature" },
+  { key:"n:mythology",   slug:"mythology",   icon:"moonStar",     label:"Mythology" },
+  { key:"n:politics",    slug:"politics",    icon:"landmark",     label:"Politics" },
+  { key:"n:celebrities", slug:"celebrities", icon:"users",        label:"Celebrities" },
+  { key:"n:animals",     slug:"animals",     icon:"brain",        label:"Animals" },
+  { key:"n:vehicles",    slug:"vehicles",    icon:"gamepad",      label:"Vehicles" },
+  { key:"n:comics",      slug:"comics",      icon:"bookOpen",     label:"Comics" },
+  { key:"n:anime",       slug:"anime",       icon:"clapperboard", label:"Anime" },
+  { key:"n:cartoons",    slug:"cartoons",    icon:"clapperboard", label:"Cartoons" },
+];
+const NATIVE_CATEGORY_KEYS = NATIVE_CATEGORIES.map(c=>c.key);
+const NATIVE_CAT_BY_KEY = Object.fromEntries(NATIVE_CATEGORIES.map(c=>[c.key,c]));
+function nativeSlug(key){ return key.startsWith(NATIVE_CAT_PREFIX) ? key.slice(NATIVE_CAT_PREFIX.length) : key; }
+function catListForSource(src){ return src === "native" ? NATIVE_CATEGORIES : CATEGORIES; }
 const TRIVIA_TO_ANSWERIT = {};
 for (const [ourKey, apiKeys] of Object.entries(TRIVIA_API_CATEGORIES)) for (const ak of apiKeys) TRIVIA_TO_ANSWERIT[ak] = ourKey;
 const OPENTDB_CATEGORIES = {
@@ -2434,10 +2480,9 @@ async function buildNativePool(categories, onProgress, shouldCancel){
   onProgress?.({ key:"fetchingQuestions" });
   const calls = [];
   for (const c of categories){
-    const apiCat = QUESTION_API_CATEGORIES[c];
-    if (!apiCat) continue;
+    const slug = nativeSlug(c); // grid keys are `n:`-prefixed; the API wants the bare slug
     for (const d of ["easy","medium","hard"]){
-      calls.push(fetchQuestionApi({ category:apiCat, difficulty:d, amount:100 }).then(list => {
+      calls.push(fetchQuestionApi({ category:slug, difficulty:d, amount:100 }).then(list => {
         for (const raw of list){
           const q = normalizeQuestion(raw, "question-api", c);
           if (!q || !["easy","medium","hard"].includes(q.level)) continue;
@@ -3047,8 +3092,20 @@ function savePB(p){ try { localStorage.setItem(PB_KEY, JSON.stringify(p)); } cat
    ============================================================ */
 let settings = loadSettings();
 
+// The grid, settings.categories and every category key downstream come from one of two
+// namespaces - the curated 11 or the API's `n:`-prefixed list - depending on the question
+// source. Whenever the stored selection doesn't belong to the active source's namespace
+// (source just switched, or older saved settings), fall back to "all selected", same as the
+// first-run default.
+function reconcileCategories(){
+  const valid = new Set(catListForSource(settings.questionSource).map(c=>c.key));
+  if (!settings.categories.length || !settings.categories.every(k => valid.has(k))){
+    settings.categories = [...valid];
+  }
+}
 function renderCatGrid(){
-  $("catGrid").innerHTML = CATEGORIES.map(c => `
+  reconcileCategories();
+  $("catGrid").innerHTML = catListForSource(settings.questionSource).map(c => `
     <button type="button" class="cattile ${settings.categories.includes(c.key)?'on':''}" data-cat="${c.key}">
       ${icon(c.icon)}<span>${catLabel(c.key)}</span>
     </button>`).join("");
@@ -3075,7 +3132,7 @@ wireSeg("segN", "n");
 wireSeg("segStyle", "style");
 wireSeg("segIntensity", "intensity");
 wireSeg("segRegion", "region");
-wireSeg("segQSource", "questionSource");
+wireSeg("segQSource", "questionSource", renderCatGrid); // the two sources have different category lists
 
 on($("toggleStreaks"), "change", e => { settings.streaks = e.target.checked; refreshSetup(); });
 on($("toggleInsurance"), "change", e => { settings.hellInsurance = e.target.checked; refreshSetup(); });
@@ -3087,6 +3144,7 @@ function lvlDot(level){
   return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(${LEVEL_COLOR_VAR[level]});vertical-align:middle;margin-right:4px"></span>`;
 }
 function refreshSetup(){
+  reconcileCategories(); // keep the selection in the active source's namespace
   $("segN").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v==String(settings.n)));
   $("segStyle").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.style));
   $("segIntensity").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.intensity));
@@ -3096,6 +3154,7 @@ function refreshSetup(){
   $("toggleCurated").checked = nativeSrc ? false : settings.curatedBank !== false;
   $("toggleCurated").disabled = nativeSrc; // "My question API" has no curated bank to blend
   $("curatedBankRow").style.opacity = nativeSrc ? ".45" : "";
+  $("catNote").textContent = t(nativeSrc ? "nativeCategoriesNote" : "questionsLanguageNote");
   $("toggleStreaks").checked = settings.streaks;
   $("toggleInsurance").checked = settings.hellInsurance;
   $("toggleInsurance").disabled = !settings.streaks;
@@ -3216,7 +3275,7 @@ function showQuestion(q){
   const chip = $("qLevelChip");
   chip.textContent = levelName(q.level) + (q.isDouble ? " ×2" : "");
   chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
-  $("qCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("qCatChip").innerHTML = `${icon(catIcon(q.category))} ${catLabel(q.category)}`;
   $("qProgress").textContent = q.isDouble ? t("theDouble") : t("questionOf", R.qIndexShown, settings.n);
   $("qText").textContent = q.text;
 
@@ -3348,7 +3407,7 @@ function renderReveal(q, { verdict, correct, ms, result, disputeAutoResolved }){
   const chip = $("rLevelChip");
   chip.textContent = levelName(q.level) + (q.isDouble ? " ×2" : "");
   chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
-  $("rCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("rCatChip").innerHTML = `${icon(catIcon(q.category))} ${catLabel(q.category)}`;
   $("rAnswer").textContent = q.displayAnswer || q.correctAnswer;
   $("rDisputeNote").classList.toggle("hide", !disputeAutoResolved);
 
@@ -3394,7 +3453,7 @@ function finishRound(){
 
   $("catBreakdown").innerHTML = Object.entries(R.byCategory).map(([key, s]) => `
     <div class="catrow">
-      <div class="name">${icon(CAT_BY_KEY[key].icon)} ${catLabel(key)}</div>
+      <div class="name">${icon(catIcon(key))} ${catLabel(key)}</div>
       <div class="bar"><div style="width:${s.n?Math.round(s.c/s.n*100):0}%"></div></div>
       <div class="frac">${s.c}/${s.n}</div>
     </div>`).join("") || `<p style="color:var(--muted);font-size:13px">${esc(t("noQuestionsAnswered"))}</p>`;
@@ -4197,19 +4256,20 @@ function rmRenderLobby(){
   $("lobbyStartBtn").innerHTML = `${icon("play")} <span>${esc(t("startRace"))}</span>`;
 }
 
-let rmCatGridBuilt = false;
+let rmCatGridSource = null;
 function rmRenderLobbySettings(settings, mix){
-  if (!rmCatGridBuilt){
-    $("lobbyCatGrid").innerHTML = CATEGORIES.map(c => `
+  const src = settings.questionSource || "trivia";
+  if (rmCatGridSource !== src){ // the two sources have different category lists - rebuild on switch
+    $("lobbyCatGrid").innerHTML = catListForSource(src).map(c => `
       <button type="button" class="cattile" data-c="${c.key}">${icon(c.icon)}<span>${esc(catLabel(c.key))}</span></button>`).join("");
     $("lobbyCatGrid").querySelectorAll("[data-c]").forEach(b => on(b,"click",() => {
       const cur = new Set((RM.state.settings.categories||[]).filter(c=>c!=="mix"));
       if (cur.has(b.dataset.c)) cur.delete(b.dataset.c); else cur.add(b.dataset.c);
       rmSend({ type:"configure", categories: cur.size ? [...cur] : [] });
     }));
-    rmCatGridBuilt = true;
+    rmCatGridSource = src;
   }
-  const active = new Set(settings.categories.includes("mix") ? CATEGORY_KEYS : settings.categories);
+  const active = new Set(settings.categories.includes("mix") ? catListForSource(src).map(c=>c.key) : settings.categories);
   $("lobbyCatGrid").querySelectorAll("[data-c]").forEach(b => b.classList.toggle("on", active.has(b.dataset.c)));
 
   const segs = [["lobbySegN","n"],["lobbySegStyle","style"],["lobbySegIntensity","intensity"],["lobbySegRegion","region"],["lobbySegTeams","teams"],["lobbySegPace","revealPace"],["lobbySegQLang","questionLang"],["lobbySegQSource","questionSource"]];
@@ -4282,7 +4342,7 @@ function rmShowQuestionNow(q){
   const chip = $("rqLevelChip");
   chip.textContent = levelName(q.level) + (q.isDouble ? " ×2" : "");
   chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
-  $("rqCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  $("rqCatChip").innerHTML = `${icon(catIcon(q.category))} ${catLabel(q.category)}`;
   $("rqProgress").textContent = q.isDouble ? t("theDouble") : t("questionOf", q.qIndex+1, q.total);
   $("rqText").textContent = q.text;
   $("rqAnswered").textContent = "";
@@ -4385,7 +4445,7 @@ function rmOnReveal(data){
   const chip = $("rrLevelChip");
   chip.textContent = q ? levelName(q.level) + (q.isDouble?" ×2":"") : "";
   if (q) chip.style.background = `var(${LEVEL_COLOR_VAR[q.level]})`;
-  if (q) $("rrCatChip").innerHTML = `${icon(CAT_BY_KEY[q.category].icon)} ${catLabel(q.category)}`;
+  if (q) $("rrCatChip").innerHTML = `${icon(catIcon(q.category))} ${catLabel(q.category)}`;
   $("rrQuestionText").textContent = q?.text || "";
   $("rrAnswer").textContent = data.correctAnswer;
   $("rrDisputeNote").classList.toggle("hide", !data.disputeAutoResolved);
@@ -4495,7 +4555,7 @@ function rmOnFinal(data){
   const mine = data.podium.find(p=>p.id===RM.me.id);
   const cats = mine?.byCategory || {};
   $("rpCatBreakdown").innerHTML = Object.entries(cats).map(([key,s]) => `
-    <div class="catrow"><div class="name">${icon(CAT_BY_KEY[key].icon)} ${catLabel(key)}</div>
+    <div class="catrow"><div class="name">${icon(catIcon(key))} ${catLabel(key)}</div>
       <div class="bar"><div style="width:${s.n?Math.round(s.c/s.n*100):0}%"></div></div>
       <div class="frac">${s.c}/${s.n}</div></div>`).join("") || `<p style="color:var(--muted);font-size:13px">${esc(t("noQuestionsAnswered"))}</p>`;
 

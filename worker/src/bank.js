@@ -9,7 +9,7 @@
 // OpenTDB throttle window will make each other wait; curated-core + Trivia API cover most of a
 // round on their own, so this only bites the OpenTDB top-up path. Tracked in ANSWER-IT.md §23.
 import {
-  CATEGORY_KEYS, TRIVIA_API_CATEGORIES, TRIVIA_API_TAGS, OPENTDB_CATEGORIES, QUESTION_API_CATEGORIES,
+  CATEGORY_KEYS, TRIVIA_API_CATEGORIES, TRIVIA_API_TAGS, OPENTDB_CATEGORIES, nativeSlug,
   normalizeQuestion, fetchTriviaApi, fetchOpenTDB, fetchQuestionApi, createThrottle,
 } from "./sources.js";
 import { gradeQuestion, loadCurated, dedupeKey } from "./quality.js";
@@ -120,20 +120,19 @@ export async function buildPool(categories, n, excludeKeys = new Set(), region =
   return pool;
 }
 
-// Curated-free, gate-free twin of buildPool for opts.source === "native". One fetch per
-// (category, difficulty); categories the API has no content for (QUESTION_API_CATEGORIES) are
-// silently skipped. A category with nothing left just stays empty and drawNextQuestion's
-// nearest-level fallback / short-round handling (§20) takes over.
+// Curated-free, gate-free twin of buildPool for opts.source === "native". `categories` are the
+// API's own `n:`-prefixed keys (resolveCategories validated them against NATIVE_CATEGORY_KEYS);
+// one fetch per (category, difficulty). A category that comes back empty just stays empty and
+// drawNextQuestion's nearest-level fallback / short-round handling (§20) takes over.
 async function buildNativePool(categories, excludeKeys, endpoint) {
   const pool = {};
   for (const c of categories) pool[c] = { easy: [], medium: [], hard: [] };
   const seen = new Set(excludeKeys);
   const calls = [];
   for (const c of categories) {
-    const apiCat = QUESTION_API_CATEGORIES[c];
-    if (!apiCat) continue;
+    const slug = nativeSlug(c);
     for (const d of ["easy", "medium", "hard"]) {
-      calls.push(fetchQuestionApi({ endpoint, category: apiCat, difficulty: d, amount: 100 }).then((list) => {
+      calls.push(fetchQuestionApi({ endpoint, category: slug, difficulty: d, amount: 100 }).then((list) => {
         for (const raw of list) {
           const q = normalizeQuestion(raw, "question-api", c, buildAccepted);
           if (!q || !["easy", "medium", "hard"].includes(q.level)) continue;

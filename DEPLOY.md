@@ -111,7 +111,9 @@ localStorage.setItem("answerit_room_endpoint", "http://localhost:8787")
 
 Settings has a **Question source** toggle: *Trivia API* (default - curated bank blended with The
 Trivia API, quality-gated) or *My question API* (`nizarhamza/questions-api` - replaces the whole
-source, no curated bank, no gate; English, and only Science / History / Geography / Film today).
+source, no curated bank, no gate; English only). Under *My question API* the category grid
+switches to that API's own ~24 categories (`GET /v1/categories`) - see `NATIVE_CATEGORIES` in
+`index.html`, mirrored in `worker/src/sources.js`.
 
 To switch the second option on, point it at that deployed Worker's origin
 (`https://questions-api.<your-subdomain>.workers.dev`) in two places:

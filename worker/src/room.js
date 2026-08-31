@@ -8,7 +8,7 @@ import {
   scoreAnswer, comparePlayers, allocateCounts, PROFILES, matchOpenAnswer, LEVELS, normalizeAnswer,
 } from "./game-core.js";
 import { buildPool, poolTotal, initSessionState, drawNextQuestion, drawDouble, recordOutcome } from "./bank.js";
-import { CATEGORY_KEYS } from "./sources.js";
+import { CATEGORY_KEYS, NATIVE_CATEGORY_KEYS } from "./sources.js";
 import { translateRoomQuestion, SUPPORTED_LANGS } from "./translate.js";
 
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // §13 - auto-wipe an abandoned room after 2h idle
@@ -66,10 +66,14 @@ function applyQuestionTranslation(q, tr) {
   return { ...q, text, displayAnswer, accepted };
 }
 
-function resolveCategories(categories) {
-  if (!Array.isArray(categories) || !categories.length || categories.includes("mix")) return [...CATEGORY_KEYS];
-  const ok = categories.filter((c) => CATEGORY_KEYS.includes(c));
-  return ok.length ? ok : [...CATEGORY_KEYS];
+// The curated 11 and the questions-api's own ~24 (`n:`-prefixed) are separate namespaces; which
+// one is valid depends on the room's question source. A stale selection from the other namespace
+// (source was just switched) filters down to nothing and falls back to "all", same as "mix".
+function resolveCategories(categories, source) {
+  const keys = source === "native" ? NATIVE_CATEGORY_KEYS : CATEGORY_KEYS;
+  if (!Array.isArray(categories) || !categories.length || categories.includes("mix")) return [...keys];
+  const ok = categories.filter((c) => keys.includes(c));
+  return ok.length ? ok : [...keys];
 }
 
 export class Room {
@@ -260,8 +264,12 @@ export class Room {
       n,
       // Capped at the real category count, not a hardcoded number: a literal 10 here quietly
       // made "select all" impossible the moment an 11th category (Islamic Knowledge) existed -
-      // whichever one a host selected last never made it into the stored list.
-      categories: Array.isArray(data.categories) && data.categories.length ? data.categories.slice(0, CATEGORY_KEYS.length) : s.categories,
+      // whichever one a host selected last never made it into the stored list. The native
+      // source's list is longer, so cap at whichever namespace is bigger and let
+      // resolveCategories drop anything that doesn't belong to the active one.
+      categories: Array.isArray(data.categories) && data.categories.length
+        ? data.categories.slice(0, Math.max(CATEGORY_KEYS.length, NATIVE_CATEGORY_KEYS.length))
+        : s.categories,
       style: ["choice", "open", "mixed"].includes(data.style) ? data.style : s.style,
       intensity: ["chill", "standard", "brutal", "adaptive"].includes(data.intensity) ? data.intensity : s.intensity,
       region: REGIONS.includes(data.region) ? data.region : s.region,
@@ -274,6 +282,9 @@ export class Room {
       questionSource: QUESTION_SOURCES.includes(data.questionSource) ? data.questionSource : (s.questionSource || "trivia"),
       curatedBank: data.curatedBank !== undefined ? !!data.curatedBank : (s.curatedBank !== false),
     };
+    // Switching source swaps the category namespace - reset to "mix" so the lobby doesn't show
+    // a grid full of keys from the other list.
+    if (room.settings.questionSource !== (s.questionSource || "trivia")) room.settings.categories = ["mix"];
     if (data.judgeOnlyHost !== undefined) room.judgeOnlyHost = !!data.judgeOnlyHost;
     this.syncTeams(room);
     const profile = room.settings.intensity === "adaptive" ? PROFILES.standard : PROFILES[room.settings.intensity];
@@ -347,7 +358,7 @@ export class Room {
     const hostPlayer = room.players[room.hostId];
     if (hostPlayer) hostPlayer.role = room.judgeOnlyHost ? "judge" : "player";
 
-    const categories = resolveCategories(room.settings.categories);
+    const categories = resolveCategories(room.settings.categories, room.settings.questionSource);
     let pool;
     try {
       pool = await buildPool(categories, room.settings.n, new Set(room.seenQuestionIds), room.settings.region, {
@@ -399,7 +410,7 @@ export class Room {
   }
 
   async _serveNextQuestion(room, categoriesArg) {
-    const categories = categoriesArg || resolveCategories(room.settings.categories);
+    const categories = categoriesArg || resolveCategories(room.settings.categories, room.settings.questionSource);
     const pool = await this.state.storage.get("pool");
     const state = room.sessionState;
     const wasLastRegular = state.servedLevels.length >= room.settings.n;
