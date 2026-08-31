@@ -36,10 +36,11 @@ function defaultSettings() {
   return {
     n: 15, categories: ["mix"], style: "mixed", intensity: "adaptive", region: "any",
     streaks: true, hellInsurance: false, extended: false, teams: 0, revealPace: "host",
-    questionLang: "en",
+    questionLang: "en", questionSource: "trivia",
   };
 }
 const QUESTION_LANGS = ["en", ...SUPPORTED_LANGS];
+const QUESTION_SOURCES = ["trivia", "native"];
 // Applies a { text, options, answer } translation to a freshly-drawn question, or leaves it in
 // English if there was nothing usable. Mirrors index.html's applyTranslation() exactly, because
 // scoring must keep working the same way here: a choice question's correctness is the array
@@ -270,6 +271,7 @@ export class Room {
       teams: Number.isInteger(data.teams) ? Math.max(0, Math.min(6, data.teams)) : s.teams,
       revealPace: ["auto", "host"].includes(data.revealPace) ? data.revealPace : s.revealPace,
       questionLang: QUESTION_LANGS.includes(data.questionLang) ? data.questionLang : (s.questionLang || "en"),
+      questionSource: QUESTION_SOURCES.includes(data.questionSource) ? data.questionSource : (s.questionSource || "trivia"),
     };
     if (data.judgeOnlyHost !== undefined) room.judgeOnlyHost = !!data.judgeOnlyHost;
     this.syncTeams(room);
@@ -347,7 +349,10 @@ export class Room {
     const categories = resolveCategories(room.settings.categories);
     let pool;
     try {
-      pool = await buildPool(categories, room.settings.n, new Set(room.seenQuestionIds), room.settings.region);
+      pool = await buildPool(categories, room.settings.n, new Set(room.seenQuestionIds), room.settings.region, {
+        source: room.settings.questionSource,
+        endpoint: this.env.QUESTION_API_ENDPOINT || "",
+      });
     } catch {
       return this.sendTo(this.wsForPlayer(playerId)[0], { type: "error", code: "sources-unreachable", message: "Both trivia sources are unreachable right now. Try again in a moment." });
     }

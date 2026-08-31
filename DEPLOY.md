@@ -107,6 +107,21 @@ localStorage.setItem("answerit_room_endpoint", "http://localhost:8787")
 
 `GET /api/health` reports whether the AI, KV and Durable Object bindings are actually bound.
 
+### Optional: the "My question API" source
+
+Settings has a **Question source** toggle: *Trivia API* (default - curated bank blended with The
+Trivia API, quality-gated) or *My question API* (`nizarhamza/questions-api` - replaces the whole
+source, no curated bank, no gate; English, and only Science / History / Geography / Film today).
+
+To switch the second option on, point it at that deployed Worker's origin
+(`https://questions-api.<your-subdomain>.workers.dev`) in two places:
+
+- **Solo:** `QUESTION_API_ENDPOINT` in `index.html` (near the `fetchQuestionApi` comment), or
+  from the console: `localStorage.setItem("answerit_question_api_endpoint", "http://localhost:8787")`
+- **Rooms:** `QUESTION_API_ENDPOINT` under `[vars]` in `worker/wrangler.toml`, then redeploy.
+
+Left empty, the toggle still appears but a round set to "My question API" just won't build.
+
 ### What the translation tier costs
 
 Nothing, on the free tier, with real headroom - and you cannot be surprise-billed, because the

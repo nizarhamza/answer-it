@@ -42,6 +42,17 @@ export const TRIVIA_API_CATEGORIES = {
 };
 export const TRIVIA_API_TAGS = { games: ["video_games", "board_games"] };
 
+// nizarhamza/questions-api (the "native" v1 surface, GET /v1/questions). Its bank currently
+// only carries content for these four - science / history / geography / film - so the other
+// Answer It categories map to nothing and are skipped, exactly like `games`/`islamic` are on
+// The Trivia API. Value is the API's own category slug.
+export const QUESTION_API_CATEGORIES = {
+  science: "science",
+  history: "history",
+  geography: "geography",
+  screen: "film",
+};
+
 // OpenTDB numeric category ids (opentdb.com/api_category.php) - one call per id, §6.1.
 // No `islamic` entry - OpenTDB has no matching category either.
 export const OPENTDB_CATEGORIES = {
@@ -109,6 +120,36 @@ export function normalizeQuestion(raw, source, categoryKey, buildAccepted) {
     };
   }
 
+  if (source === "question-api") {
+    // GET /v1/questions objects (reveal=true): always 4-option MC, answer_index 0-3 into
+    // options, answer = options[answer_index]. difficulty is easy|medium|hard 1:1 with ours.
+    const text = String(raw.question || "").trim();
+    const options = Array.isArray(raw.options) ? raw.options.map((s) => String(s).trim()) : [];
+    const ai = Number(raw.answer_index);
+    if (!text || text.length > MAX_QUESTION_LEN) return null;
+    if (options.length !== 4 || !Number.isInteger(ai) || ai < 0 || ai > 3) return null;
+    // No MIN_ANSWER_LEN floor here (unlike the crowd-sourced adapters): a one-character option
+    // like "H" or "6" is a valid intended answer, and this is a choice question scored by index.
+    const correct = String(raw.answer ?? options[ai]).trim();
+    if (!correct || options[ai] !== correct) return null;
+    return {
+      id: `qapi:${raw.id || text.slice(0, 40)}`,
+      source: "question-api",
+      text,
+      category: categoryKey,
+      level: raw.difficulty,
+      type: "choice",
+      options,
+      answerIndex: ai,
+      accepted: buildAccepted(correct),
+      modifiers: [],
+      timeLimit: null,
+      media: null,
+      isNiche: false,
+      correctAnswer: correct,
+    };
+  }
+
   if (source === "opentdb") {
     const text = decodeSourceText(String(raw.question || ""), "opentdb").trim();
     const correct = decodeSourceText(String(raw.correct_answer || ""), "opentdb").trim();
@@ -166,6 +207,19 @@ export async function fetchTriviaApi({ categories = [], tags = [], limit = 50, d
   if (tags.length) params.set("tags", tags.join(","));
   const data = await fetchJson(`https://the-trivia-api.com/v2/questions?${params}`);
   return Array.isArray(data) ? data : [];
+}
+
+// One call per (category, difficulty) against the native questions-api. `endpoint` is its
+// origin, e.g. https://questions-api.<subdomain>.workers.dev - no auth, CORS open. Returns []
+// on any failure (empty endpoint, unknown/empty category -> 400/404, network), so a missing
+// deployment just yields an empty pool rather than throwing.
+export async function fetchQuestionApi({ endpoint, category, difficulty, amount = 50 } = {}) {
+  if (!endpoint) return [];
+  const params = new URLSearchParams({ amount: String(Math.min(100, amount)) });
+  if (category) params.set("category", category);
+  if (difficulty) params.set("difficulty", difficulty);
+  const data = await fetchJson(`${endpoint.replace(/\/$/, "")}/v1/questions?${params}`);
+  return data && Array.isArray(data.questions) ? data.questions : [];
 }
 
 export async function fetchOpenTDB({ categoryId, difficulty, amount = 50 } = {}) {

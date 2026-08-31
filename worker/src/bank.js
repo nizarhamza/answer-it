@@ -9,8 +9,8 @@
 // OpenTDB throttle window will make each other wait; curated-core + Trivia API cover most of a
 // round on their own, so this only bites the OpenTDB top-up path. Tracked in ANSWER-IT.md §23.
 import {
-  CATEGORY_KEYS, TRIVIA_API_CATEGORIES, TRIVIA_API_TAGS, OPENTDB_CATEGORIES,
-  normalizeQuestion, fetchTriviaApi, fetchOpenTDB, createThrottle,
+  CATEGORY_KEYS, TRIVIA_API_CATEGORIES, TRIVIA_API_TAGS, OPENTDB_CATEGORIES, QUESTION_API_CATEGORIES,
+  normalizeQuestion, fetchTriviaApi, fetchOpenTDB, fetchQuestionApi, createThrottle,
 } from "./sources.js";
 import { gradeQuestion, loadCurated, dedupeKey } from "./quality.js";
 // Side-effect imports: these are classic scripts (see their own headers) that assign
@@ -44,7 +44,12 @@ function minPerBucket(n, categoryCount) {
 // `region` ("any" or one of the curated bank's region tags) restricts the pool to that region's
 // curated rows and skips the API fetch below entirely - neither trivia source tags its questions
 // by region, so there is nothing there a region filter could ever apply to.
-export async function buildPool(categories, n, excludeKeys = new Set(), region = "any") {
+// `opts.source` "native" swaps the whole question source for nizarhamza/questions-api: no
+// curated bank, no quality gate, no Trivia API / OpenTDB - the API is trusted to return
+// final-quality questions (host's explicit choice). `opts.endpoint` is that API's origin
+// (env.QUESTION_API_ENDPOINT); empty -> empty pool -> onStart's "too-few-questions" error.
+export async function buildPool(categories, n, excludeKeys = new Set(), region = "any", opts = {}) {
+  if (opts.source === "native") return buildNativePool(categories, excludeKeys, opts.endpoint || "");
   const regionFilter = region && region !== "any" ? region : null;
   const minBucket = minPerBucket(n, categories.length);
   const pool = {};
@@ -109,6 +114,35 @@ export async function buildPool(categories, n, excludeKeys = new Set(), region =
   for (const c of categories) for (const L of ["easy", "medium", "hard"]) {
     pool[c][L].sort((a, b) => (b._score || 0) - (a._score || 0)); // best-first; no per-device freshness history on the server
   }
+  return pool;
+}
+
+// Curated-free, gate-free twin of buildPool for opts.source === "native". One fetch per
+// (category, difficulty); categories the API has no content for (QUESTION_API_CATEGORIES) are
+// silently skipped. A category with nothing left just stays empty and drawNextQuestion's
+// nearest-level fallback / short-round handling (§20) takes over.
+async function buildNativePool(categories, excludeKeys, endpoint) {
+  const pool = {};
+  for (const c of categories) pool[c] = { easy: [], medium: [], hard: [] };
+  const seen = new Set(excludeKeys);
+  const calls = [];
+  for (const c of categories) {
+    const apiCat = QUESTION_API_CATEGORIES[c];
+    if (!apiCat) continue;
+    for (const d of ["easy", "medium", "hard"]) {
+      calls.push(fetchQuestionApi({ endpoint, category: apiCat, difficulty: d, amount: 100 }).then((list) => {
+        for (const raw of list) {
+          const q = normalizeQuestion(raw, "question-api", c, buildAccepted);
+          if (!q || !["easy", "medium", "hard"].includes(q.level)) continue;
+          const key = dedupeKey(q);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          pool[c][q.level].push({ ...q, key, _score: CURATED_SCORE });
+        }
+      }));
+    }
+  }
+  await Promise.all(calls);
   return pool;
 }
 
